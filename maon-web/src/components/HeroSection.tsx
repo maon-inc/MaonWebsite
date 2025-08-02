@@ -1,39 +1,72 @@
+/******************************************************************************
+ *  HeroSection.tsx  –  banner 98 vw × 85 vh, MonteCarlo script, tint on top
+ ******************************************************************************/
+
 export default function HeroSection() {
     return (
-      <section className="max-w-7xl mx-auto my-10 overflow-hidden rounded-2xl bg-gradient-to-tr from-[#9db3bd] to-[#c2cfd6]">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* LEFT ─────────────── */}
-          <div className="p-8 lg:p-14 flex flex-col justify-center text-white">
-            <span className="uppercase tracking-wide text-sm opacity-80 flex items-center gap-2">
-              <svg width="18" viewBox="0 0 24 24" fill="none">
-                <path d="M4 12h16M12 4v16" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              A new era of wellness
-            </span>
+      <section
+        className="relative mx-auto mb-12 w-[98vw] h-[85vh] overflow-hidden
+                   rounded-2xl bg-gradient-to-br from-[#9fb2be] to-[#c4cfd6]"
+      >
+        {/* ─── phone mock-up (layer z-10) ─────────────────────────── */}
+        <img
+          src="/img/phone-hero.png"
+          alt="Moan app on phone"
+          className="pointer-events-none absolute right-[5%] bottom-0 z-10
+                     w-auto max-h-[82%] translate-y-[9%] object-contain drop-shadow-2xl"
+        />
   
-            <h1 className="font-serif text-6xl lg:text-8xl mt-6 leading-[0.9]">
-              Passive&nbsp;Wellness.
-            </h1>
+        {/* ─── subtle tint overlay – covers entire hero, above phone ─ */}
+        <div className="pointer-events-none absolute inset-0 z-15 bg-black/20 mix-blend-multiply" />
   
-            <a
-              href="#product"
-              className="mt-10 inline-flex items-center gap-2 border-b pb-1 border-white/70 hover:border-white"
-            >
-              Explore our product
-              <svg width="16" viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                <path d="M5 12h14M13 6l6 6-6 6" strokeWidth="2" />
-              </svg>
-            </a>
+        {/* ─── foreground grid (z-20) ─────────────────────────────── */}
+        <div className="relative z-20 grid h-full lg:grid-cols-2">
+          <div className="flex flex-col justify-between px-10 lg:px-24 py-10 text-white">
+            {/* icon + tagline */}
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/70">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 4v16M4 12h16" strokeWidth="2" />
+                </svg>
+              </div>
+              <p className="max-w-[230px] text-[15.6px] leading-[1.45] tracking-[.04em]">
+                A new era of wellness that is personalized to you, forever
+                changing your emotional state.
+              </p>
+            </div>
+  
+            {/* headline + CTA */}
+            <div className="space-y-10 pb-2">
+              <h1 className="whitespace-nowrap leading-[0.83]">
+                <span
+                  className="font-[MonteCarlo] italic tracking-wider
+                             text-[6.6rem] sm:text-[8.4rem] lg:text-[11.56rem]"
+                >
+                  Passive&nbsp;
+                </span>
+                <span
+                  className="font-serif text-[6rem] sm:text-[7.68rem] lg:text-[9.6rem]"
+                >
+                  Wellness.
+                </span>
+              </h1>
+  
+              <a
+                href="#product"
+                className="inline-flex items-center gap-2 border-b border-white/70 pb-[3px]
+                          text-[17px] tracking-[.02em] hover:border-white"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                Explore our product
+                <svg width="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M5 12h14M13 6l6 6-6 6" strokeWidth="2" />
+                </svg>
+              </a>
+            </div>
           </div>
   
-          {/* RIGHT ────────────── */}
-          <div className="relative flex items-end justify-center pt-20 lg:pt-0">
-            <img
-              src="/img/phone-hero.png"
-              alt="Moan app on phone"
-              className="max-w-[260px] lg:max-w-[340px] drop-shadow-2xl"
-            />
-          </div>
+          {/* right column left blank – phone already positioned */}
+          <div />
         </div>
       </section>
     );
