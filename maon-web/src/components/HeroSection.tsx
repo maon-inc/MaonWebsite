@@ -1,5 +1,5 @@
 /******************************************************************************
- *  HeroSection.tsx  –  banner 98 vw × 85 vh, MonteCarlo script, tint on top
+ *  HeroSection.tsx  –  fluid headline (6 rem → 12 rem) + darker tint 20 %
  ******************************************************************************/
 
 export default function HeroSection() {
@@ -8,7 +8,7 @@ export default function HeroSection() {
         className="relative mx-auto mb-12 w-[98vw] h-[85vh] overflow-hidden
                    rounded-2xl bg-gradient-to-br from-[#9fb2be] to-[#c4cfd6]"
       >
-        {/* ─── phone mock-up (layer z-10) ─────────────────────────── */}
+        {/* ─── phone mock-up ─────────────────────────────────────── */}
         <img
           src="/img/phone-hero.png"
           alt="Moan app on phone"
@@ -16,10 +16,10 @@ export default function HeroSection() {
                      w-auto max-h-[82%] translate-y-[9%] object-contain drop-shadow-2xl"
         />
   
-        {/* ─── subtle tint overlay – covers entire hero, above phone ─ */}
+        {/* ─── 20 % tint overlay (sits above phone, below text) ─── */}
         <div className="pointer-events-none absolute inset-0 z-15 bg-black/20 mix-blend-multiply" />
   
-        {/* ─── foreground grid (z-20) ─────────────────────────────── */}
+        {/* ─── foreground content grid (z-20) ───────────────────── */}
         <div className="relative z-20 grid h-full lg:grid-cols-2">
           <div className="flex flex-col justify-between px-10 lg:px-24 py-10 text-white">
             {/* icon + tagline */}
@@ -35,26 +35,29 @@ export default function HeroSection() {
               </p>
             </div>
   
-            {/* headline + CTA */}
+            {/* fluid headline + CTA */}
             <div className="space-y-10 pb-2">
-              <h1 className="whitespace-nowrap leading-[0.83]">
+              <h1
+                className="leading-[0.83] whitespace-normal font-serif"
+                style={{
+                  /* 6 rem at 768 px → 12 rem at very large screens */
+                  fontSize: 'clamp(6rem, 5rem + 4vw, 12rem)',
+                }}
+              >
                 <span
-                  className="font-[MonteCarlo] italic tracking-wider
-                             text-[6.6rem] sm:text-[8.4rem] lg:text-[11.56rem]"
+                  className="font-[MonteCarlo] italic tracking-wider"
+                  /* “Passive” 12 % larger than Wellness */
+                  style={{ fontSize: '1.12em' }}
                 >
                   Passive&nbsp;
                 </span>
-                <span
-                  className="font-serif text-[6rem] sm:text-[7.68rem] lg:text-[9.6rem]"
-                >
-                  Wellness.
-                </span>
+                <span>Wellness.</span>
               </h1>
   
               <a
                 href="#product"
                 className="inline-flex items-center gap-2 border-b border-white/70 pb-[3px]
-                          text-[17px] tracking-[.02em] hover:border-white"
+                            text-[17px] tracking-[.02em] hover:border-white"
                 style={{ letterSpacing: '-0.02em' }}
               >
                 Explore our product
@@ -65,7 +68,7 @@ export default function HeroSection() {
             </div>
           </div>
   
-          {/* right column left blank – phone already positioned */}
+          {/* empty right column (phone already positioned) */}
           <div />
         </div>
       </section>

@@ -1,10 +1,11 @@
 import HeroSection from './components/HeroSection';
+import ServiceIntro from './components/ServiceIntro';   // ← NEW
 
 export default function App() {
   return (
     <>
       <HeroSection />
-      {/* we’ll add the next sections below later */}
+      <ServiceIntro />          {/* ← NEW just below hero */}
     </>
   );
 }
