@@ -28,8 +28,8 @@ function FeatureCard({
 
   return (
     <div
-      className={`bg-[#f5efe8] border-[2.73px] border-[#5d5d5d] rounded-[36.4px] flex flex-col h-[480px] p-12 relative transition-all duration-500 ease-in-out cursor-pointer overflow-hidden ${
-        isActive ? "w-[600px]" : isOtherHovered ? "w-[320px]" : "w-[400px]"
+      className={`bg-[#f5efe8] border-[2.73px] border-[#5d5d5d] rounded-[36.4px] flex flex-col h-[520px] relative transition-all duration-500 ease-in-out cursor-pointer overflow-hidden ${
+        isActive ? "w-[600px] p-12" : isOtherHovered ? "w-[320px] p-5" : "w-[400px] p-5"
       }`}
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
@@ -62,19 +62,15 @@ function FeatureCard({
       </div>
       
       {/* Content area with title and description */}
-      <div className="flex flex-col h-[120px] relative">
-        {/* Title */}
-        <h4
-          className={`font-geist-sans font-medium text-[25.48px] leading-[33.5px] text-black tracking-[-0.1422px] transition-all duration-500 ease-in-out ${
-            isActive ? "text-left w-full" : "text-center w-[230px] mx-auto"
-          }`}
-        >
+      <div className="flex flex-col h-[160px] relative mt-4">
+        {/* Title - fixed width and center alignment */}
+        <h4 className="font-geist-sans font-medium text-[25.48px] leading-[33.5px] text-black tracking-[-0.1422px] text-center w-[300px] mx-auto mb-4">
           {title}
         </h4>
         
-        {/* Description - visible on hover */}
+        {/* Description - visible on hover with smooth opacity transition */}
         <p
-          className={`font-geist-sans text-[16px] leading-[24px] text-black tracking-[-0.1422px] transition-all duration-500 ease-in-out absolute top-[40px] left-0 right-0 ${
+          className={`font-geist-sans text-[16px] leading-[24px] text-black tracking-[-0.1422px] transition-opacity duration-300 ease-in-out w-[280px] mx-auto text-center ${
             isActive ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -104,7 +100,7 @@ export default function ServiceAndUniqueSection() {
 
           {/* Right side - Text content */}
           <div className="flex flex-col pt-[39px]">
-            <p className="libre-bodoni-regular text-[22px] text-[#313233] mb-8 tracking-[-0.2333px]">
+            <p className="libre-bodoni-regular text-[30px] text-[#313233] mb-4 tracking-[-0.2333px]">
               The service that we provide
             </p>
 
@@ -138,11 +134,11 @@ export default function ServiceAndUniqueSection() {
 
       {/* What Makes Us Unique Section */}
       <section className="bg-[#f5efe8] mt-[-230px] py-16 px-24 min-h-[729px]">
-        <p className="libre-bodoni-regular text-[22px] text-[#313233] mb-8 tracking-[-0.2333px]">
+        <p className="libre-bodoni-regular text-center text-[30px] text-[#313233] mb-8 tracking-[-0.2333px]">
           This is what makes us unique
         </p>
 
-        <div className="relative flex justify-center items-center h-[480px] overflow-hidden">
+        <div className="relative flex justify-center items-center h-[520px] overflow-hidden">
           <div className="relative flex items-center">
             {/* First Card */}
             <div
