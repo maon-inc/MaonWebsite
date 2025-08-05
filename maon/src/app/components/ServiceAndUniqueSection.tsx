@@ -138,11 +138,11 @@ export default function ServiceAndUniqueSection() {
           This is what makes us unique
         </p>
 
-        <div className="relative flex justify-center items-center h-[520px] overflow-hidden">
+        <div className="relative flex justify-center items-center h-[520px] px-20">
           <div className="relative flex items-center">
             {/* First Card */}
             <div
-              className="relative transition-all duration-500 ease-in-out p-20"
+              className="relative transition-all duration-500 ease-in-out px-8 py-4"
               style={{
                 zIndex: hoveredCard === 0 ? 30 : 10,
                 marginRight: "-150px",
@@ -162,7 +162,7 @@ export default function ServiceAndUniqueSection() {
 
             {/* Second Card */}
             <div
-              className="relative transition-all duration-500 ease-in-out p-20"
+              className="relative transition-all duration-500 ease-in-out px-8 py-4"
               style={{
                 zIndex: hoveredCard === 1 ? 30 : 20,
                 marginRight: "-150px",
@@ -182,7 +182,7 @@ export default function ServiceAndUniqueSection() {
 
             {/* Third Card */}
             <div
-              className="relative transition-all duration-500 ease-in-out p-20"
+              className="relative transition-all duration-500 ease-in-out px-8 py-4"
               style={{
                 zIndex: hoveredCard === 2 ? 30 : 15,
               }}
