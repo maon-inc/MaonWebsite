@@ -1,4 +1,4 @@
-import { Navigation, HeroSection, ServiceSection, UniqueSection, Footer, DataPreviewSection } from "./components";
+import { Navigation, HeroSection, ServiceAndUniqueSection, Footer, DataPreviewSection } from "./components";
 
 export default function Home() {
   return (
@@ -6,8 +6,7 @@ export default function Home() {
       <Navigation />
       <main className="flex flex-col">
         <HeroSection />
-        <ServiceSection />
-        <UniqueSection />
+        <ServiceAndUniqueSection />
         <DataPreviewSection />
       </main>
       <Footer />

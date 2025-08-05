@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function Navigation() {
   return (
-    <nav className="flex items-center justify-between px-16 py-6">
+    <nav className="flex items-center justify-between px-20 py-6">
       {/* Logo */}
       <div className="flex items-center">
         <Image
