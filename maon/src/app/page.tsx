@@ -9,7 +9,7 @@ export default function Home() {
         <ServiceAndUniqueSection />
         <DataPreviewSection />
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
