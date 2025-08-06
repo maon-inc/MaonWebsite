@@ -31,7 +31,7 @@ export default function DemoComp() {
           <span className="italic">Join the waitlist</span>
           <span className="text-[#8B8886] ml-2">and gain access to a demo</span>
         </h1>
-        <p className="mt-2 text-base text-gray-700">
+        <p className="mt-0 mb-15 text-base text-gray-700">
           Get the latest updates and news, as well as access to the beta.
         </p>
         <div className="flex max-w-md mx-auto mt-4 items-center">
