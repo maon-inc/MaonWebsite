@@ -11,10 +11,10 @@ export default function HeroSection() {
         <div className="flex flex-col justify-between p-20 pr-10 flex-1 z-10">
           {/* Title */}
           <div className="max-w-md">
-            <h1 className="font-geist-sans font-bold text-3xl leading-[50px] text-[#313233] transition-colors duration-700 group-hover:text-[#fcf8f4]">
-              Haptic AI Wearable for{' '}
-              <span className="libre-bodoni-bold-italic text-4xl leading-[50px] text-[#313233] italic transition-colors duration-700 group-hover:text-[#fcf8f4]">
-                Emotion Regulation
+            <h1 className="font-geist-sans font-regular text-4xl leading-[50px] text-[#313233] transition-colors duration-700 group-hover:text-[#fcf8f4]">
+              all you need is an{'   '} <br />
+              <span className="libre-bodoni-bold-italic text-5xl leading-[60px] text-[#313233] italic transition-colors duration-700 group-hover:text-[#fcf8f4]">
+                Apple Watch
               </span>
             </h1>
           </div>

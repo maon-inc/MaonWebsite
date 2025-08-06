@@ -18,9 +18,11 @@ const chartImages = [
 const idealChart = "/placeholder_main.png";
 
 export const DataPreviewSection: React.FC = () => (
-  <section id="data" className="py-24">
+  <section id="data" className="py-16">
     <div className="mx-auto max-w-7xl px-4">
-      <h2 className="mb-6 text-2xl font-semibold">Maon gives you everything you need to know</h2>
+      <p className="libre-bodoni-regular text-center text-[30px] text-[#313233] mb-8 tracking-[-0.2333px]">
+        Maon gives you everything you need to know
+      </p>
 
       {/* Top infinite marquee of images */}
       <div className="relative overflow-hidden h-40">
@@ -43,7 +45,7 @@ export const DataPreviewSection: React.FC = () => (
       </div>
 
       {/* Bottom grid: Ideal score image + description */}
-      <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-[40%_60%]">
+      <div className="mt-2 grid grid-cols-1 gap-8 md:grid-cols-[40%_60%]">
         <div className="rounded-full flex items-center justify-center">
           {/* Auto-height image wrapper */}
           <div className="w-full">
@@ -52,15 +54,20 @@ export const DataPreviewSection: React.FC = () => (
               alt="Maon Ideal Score"
               width={1000}
               height={600}
-              style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
+              style={{ width: "100%", height: "auto", objectFit: "contain" }}
               className="rounded-3xl"
             />
           </div>
         </div>
-        <div className="rounded-[32px] bg-[#DDD8D2] p-6 sm:p-8 md:p-10 flex flex-col justify-center">
-          <h3 className="mb-4 text-lg italic font-libre-bodoni">Maon Ideal Score</h3>
-          <p className="text-sm leading-relaxed">
-            Our Ideal Score represents the optimal physiological state, derived from a comprehensive set of evidence-based health metrics. We analyze the data collected by your Apple Watch with our AI engine to quantify how closely your current readings align with that ideal.
+        <div className="rounded-[32px] bg-[#DDD8D2] p-4 sm:p-8 md:p-10 flex flex-col justify-center">
+          <h3 className="mb-4 text-3xl italic font-libre-bodoni">
+            Maon Ideal Score
+          </h3>
+          <p className="text-xl leading-relaxed">
+            Our Ideal Score represents the optimal physiological state, derived
+            from a comprehensive set of evidence-based health metrics. We
+            analyze the data collected by your Apple Watch with our AI engine to
+            quantify how closely your current readings align with that ideal.
           </p>
         </div>
       </div>
@@ -71,8 +78,12 @@ export const DataPreviewSection: React.FC = () => (
           animation: marquee 40s linear infinite;
         }
         @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
         }
       `}</style>
     </div>
