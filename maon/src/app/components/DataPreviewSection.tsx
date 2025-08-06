@@ -59,11 +59,11 @@ export const DataPreviewSection: React.FC = () => (
             />
           </div>
         </div>
-        <div className="rounded-[32px] bg-[#DDD8D2] p-4 sm:p-8 md:p-10 flex flex-col justify-center">
+        <div className="rounded-[32px] text-[#313233] bg-[#DDD8D2] p-4 sm:p-8 md:p-10 flex flex-col justify-center">
           <h3 className="mb-4 text-3xl italic font-libre-bodoni">
             Maon Ideal Score
           </h3>
-          <p className="text-xl leading-relaxed">
+          <p className="text-xl leading-relaxed text-[#313233]">
             Our Ideal Score represents the optimal physiological state, derived
             from a comprehensive set of evidence-based health metrics. We
             analyze the data collected by your Apple Watch with our AI engine to

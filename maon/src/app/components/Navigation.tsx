@@ -20,7 +20,7 @@ export default function Navigation() {
           Product
         </button>
         <button className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight">
-          Research
+          Science
         </button>
         <button className="font-geist-sans font-bold text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight">
           Demo

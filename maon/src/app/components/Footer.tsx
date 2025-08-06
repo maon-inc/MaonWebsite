@@ -30,7 +30,7 @@ export default function Footer() {
             <ul className="space-y-4">
               <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Home</button></li>
               <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Product</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Research</button></li>
+              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Science</button></li>
             </ul>
           </div>
           

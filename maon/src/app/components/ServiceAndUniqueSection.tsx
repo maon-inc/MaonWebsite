@@ -91,7 +91,7 @@ export default function ServiceAndUniqueSection() {
   return (
     <>
       {/* Service Section */}
-      <section className="px-[60px] mt-8">
+      <section className="px-[60px] mt-8 ml-12">
         <div className="flex gap-[65px] items-start">
           {/* Left side - iPhone mockup */}
           <div className="flex-shrink-0">
@@ -103,7 +103,7 @@ export default function ServiceAndUniqueSection() {
           </div>
 
           {/* Right side - Text content */}
-          <div className="flex flex-col pt-[39px]">
+          <div className="flex flex-col pt-[39px] ml-4">
             <p className="libre-bodoni-regular text-[30px] text-[#313233] mb-4 tracking-[-0.2333px]">
               The service that we provide
             </p>
