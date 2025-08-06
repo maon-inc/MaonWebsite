@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
     "lottie-react": "^2.4.1",
     "next": "15.4.5",
     "react": "19.1.0",

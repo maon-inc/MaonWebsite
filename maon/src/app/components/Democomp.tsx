@@ -6,15 +6,39 @@ export default function DemoComp() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!email.includes("@")) {
       setError("Please put in a valid email address");
       return;
     }
+
+    setIsLoading(true);
     setError("");
-    setEmail("");
-    setSubmitted(true);
+
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmail("");
+        setSubmitted(true);
+      } else {
+        setError(data.error || "Failed to subscribe. Please try again.");
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -44,12 +68,14 @@ export default function DemoComp() {
             }}
             placeholder="your@email.com"
             className="flex-1 px-4 py-3 border border-[#7c5a34] rounded-l-2xl focus:outline-none focus:ring-2 focus:ring-gray-200"
+            disabled={isLoading}
           />
           <button
             onClick={handleSubmit}
-            className="px-6 py-3 bg-[#7c5a34] border border-[#7c5a34] text-white font-semibold rounded-r-2xl hover:opacity-80 transition"
+            disabled={isLoading}
+            className="px-6 py-3 bg-[#7c5a34] border border-[#7c5a34] text-white font-semibold rounded-r-2xl hover:opacity-80 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Join waitlist
+            {isLoading ? "Joining..." : "Join waitlist"}
           </button>
         </div>
 
