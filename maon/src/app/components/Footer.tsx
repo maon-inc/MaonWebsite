@@ -28,11 +28,9 @@ export default function Footer() {
               NAVIGATE
             </h4>
             <ul className="space-y-4">
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Homepage</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Mission</button></li>
+              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Home</button></li>
               <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Product</button></li>
               <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Research</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Contact Us</button></li>
             </ul>
           </div>
           
@@ -68,7 +66,7 @@ export default function Footer() {
       
       {/* Bottom Logo */}
       <div className="ml-[-12px]">
-        <div className="font-geist-sans font-bold text-[200px] text-[#fcf8f4] leading-6 tracking-tight">
+        <div className="font-geist-sans font-bold text-[200px] text-[#fcf8f4] leading-[150px] mb-[-55px] mt-20 tracking-tight">
           MAON.
         </div>
       </div>

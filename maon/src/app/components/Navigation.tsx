@@ -17,10 +17,7 @@ export default function Navigation() {
       {/* Right Side Navigation */}
       <div className="flex items-center gap-16">
         <button className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight">
-          Mission
-        </button>
-        <button className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight">
-          Products
+          Product
         </button>
         <button className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight">
           Research
