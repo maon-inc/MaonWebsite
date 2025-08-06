@@ -29,7 +29,7 @@ export default function DemoComp() {
       <div className="mx-auto max-w-3xl px-4 text-center space-y-4">
         <h1 className="text-5xl md:text-6xl font-libre-bodoni tracking-tight">
           <span className="italic">Join the waitlist</span>
-          <span className="text-[#8B8886] ml-2">and gain access to a demo</span>
+          <span className="text-[#8B8886] ml-2"> and gain access to a demo</span>
         </h1>
         <p className="mt-0 mb-15 text-base text-gray-700">
           Get the latest updates and news, as well as access to the beta.
