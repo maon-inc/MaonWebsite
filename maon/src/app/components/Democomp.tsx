@@ -43,7 +43,7 @@ export default function DemoComp() {
               if (error) setError("");
             }}
             placeholder="your@email.com"
-            className="flex-1 px-4 py-3 border border-[#A88766]-300 rounded-l-2xl focus:outline-none focus:ring-2 focus:ring-gray-200"
+            className="flex-1 px-4 py-3 border border-[#7c5a34] rounded-l-2xl focus:outline-none focus:ring-2 focus:ring-gray-200"
           />
           <button
             onClick={handleSubmit}
