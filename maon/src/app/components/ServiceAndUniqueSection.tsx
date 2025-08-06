@@ -145,7 +145,7 @@ export default function ServiceAndUniqueSection() {
               className="relative transition-all duration-500 ease-in-out px-8 py-4"
               style={{
                 zIndex: hoveredCard === 0 ? 30 : 10,
-                marginRight: "-150px",
+                marginRight: "-115px",
               }}
             >
               <FeatureCard
@@ -165,7 +165,7 @@ export default function ServiceAndUniqueSection() {
               className="relative transition-all duration-500 ease-in-out px-8 py-4"
               style={{
                 zIndex: hoveredCard === 1 ? 30 : 20,
-                marginRight: "-150px",
+                marginRight: "-115px",
               }}
             >
               <FeatureCard
@@ -175,7 +175,7 @@ export default function ServiceAndUniqueSection() {
                 index={1}
                 isHovered={hoveredCard}
                 onHover={setHoveredCard}
-                objectPosition="object-[center_80%]"
+                objectPosition="object-[center_65%]"
                 description="Your personal AI health companion learns from your body's signals to answer questions and give personalized wellness advice."
               />
             </div>
