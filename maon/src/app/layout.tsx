@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script async defer src="https://tools.luckyorange.com/core/lo.js?site-id=bdf74af5"></script>
+        <script async defer src="https://tools.luckyorange.com/core/lo.js?site-id=3318b8fd"></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${libreBodoni.variable} antialiased`} suppressHydrationWarning={true}

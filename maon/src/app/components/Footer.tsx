@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="bg-[#313233] text-white px-16 pt-10 pb-24">
@@ -10,14 +12,14 @@ export default function Footer() {
           <p className="font-geist-sans text-xl text-[#fcf8f4] mb-8 tracking-tight">
             Healing comes from your hand.
           </p>
-          <button className="flex items-center gap-2 hover:opacity-70 transition-opacity self-start">
+          <Link href="/demo" className="flex items-center gap-2 hover:opacity-70 transition-opacity self-start">
             <span className="font-geist-sans text-xl text-[#fcf8f4] border-b border-[#fcf8f4] pb-1 tracking-tight">
               Sign up for waitlist
             </span>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="#fcf8f4" strokeWidth="1.5"/>
             </svg>
-          </button>
+          </Link>
         </div>
         
         {/* Right Side Links */}
@@ -28,9 +30,9 @@ export default function Footer() {
               NAVIGATE
             </h4>
             <ul className="space-y-4">
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Home</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Product</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Science</button></li>
+              <li><Link href="/" className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Home</Link></li>
+              <li><Link href="/product" className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Product</Link></li>
+              <li><Link href="/science" className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Science</Link></li>
             </ul>
           </div>
           
@@ -40,8 +42,8 @@ export default function Footer() {
               COMPANY
             </h4>
             <ul className="space-y-4">
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Terms of Service</button></li>
-              <li><button className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Privacy Policy</button></li>
+              <li><Link href="/terms" className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="font-geist-sans text-xl text-[#fcf8f4] hover:opacity-70 transition-opacity tracking-tight">Privacy Policy</Link></li>
             </ul>
           </div>
           
