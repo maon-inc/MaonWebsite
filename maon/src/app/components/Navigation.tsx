@@ -23,10 +23,6 @@ export default function Navigation() {
       {/* Right Side Navigation */}
       <div className="flex items-center gap-16">
         <Link
-          href="/"
-          className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight"
-        >Home</Link>
-        <Link
           href="/product"
           className="font-geist-sans font-regular text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight"
         >
