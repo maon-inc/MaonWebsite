@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface FeatureCardProps {
   title: string;
@@ -115,7 +116,7 @@ export default function ServiceAndUniqueSection() {
               day demands.
             </h3>
 
-            <button className="group relative self-start overflow-hidden">
+            <Link href="/science" className="group relative self-start overflow-hidden">
               <div className="relative flex items-center gap-2 px-3 py-1">
                 <span className="relative z-10 font-geist-sans text-[20px] text-[#313233] tracking-[-0.2333px] transition-colors duration-300 group-hover:text-[#fcf8f4]">
                   Look at the Research
@@ -137,7 +138,7 @@ export default function ServiceAndUniqueSection() {
                 </svg>
               </div>
               <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#313233] transition-all duration-300 group-hover:h-full"></span>
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -210,7 +211,7 @@ export default function ServiceAndUniqueSection() {
             </div>
           </div>
         </div>
-        <button className="group relative flex mt-12 mx-auto overflow-hidden">
+        <Link href="/science" className="group relative flex mt-12 mx-auto overflow-hidden">
           <div className="relative flex items-center gap-2 px-3 py-1">
             <span className="relative z-10 font-geist-sans text-[#313233] text-lg tracking-tight transition-colors duration-300 group-hover:text-[#fcf8f4]">
               Look at the Research
@@ -234,7 +235,7 @@ export default function ServiceAndUniqueSection() {
             </span>
           </div>
           <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#313233] transition-all duration-300 group-hover:h-full"></span>
-        </button>
+        </Link>
       </section>
     </>
   );

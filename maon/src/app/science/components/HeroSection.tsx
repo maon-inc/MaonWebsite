@@ -22,7 +22,7 @@ export default function HeroSection() {
         </div>
 
         {/* Right Side - Logo Animation */}
-        <div className="absolute right-[-100px] top-0 w-[750px] h-[650px] overflow-hidden">
+        <div className="absolute right-0 top-0 w-[750px] h-[650px] overflow-hidden">
           <Lottie
             animationData={logoAnimation}
             loop={true}
