@@ -1,9 +1,20 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+function getDbConnection() {
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL is not set, database features will not work');
+    return null;
+  }
+  return neon(process.env.DATABASE_URL);
+}
 
 export async function createEmailsTable() {
   try {
+    const sql = getDbConnection();
+    if (!sql) {
+      console.warn('Database connection not available');
+      return;
+    }
     await sql`
       CREATE TABLE IF NOT EXISTS emails (
         id SERIAL PRIMARY KEY,
@@ -19,6 +30,10 @@ export async function createEmailsTable() {
 
 export async function insertEmail(email: string) {
   try {
+    const sql = getDbConnection();
+    if (!sql) {
+      return { success: false, error: 'Database connection not available' };
+    }
     const result = await sql`
       INSERT INTO emails (email) 
       VALUES (${email})
@@ -34,6 +49,11 @@ export async function insertEmail(email: string) {
 
 export async function getEmails() {
   try {
+    const sql = getDbConnection();
+    if (!sql) {
+      console.warn('Database connection not available');
+      return [];
+    }
     const result = await sql`
       SELECT email, created_at 
       FROM emails 
