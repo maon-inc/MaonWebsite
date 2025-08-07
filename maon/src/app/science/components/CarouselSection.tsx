@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 
 export default function CarouselSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [parallaxOffsets, setParallaxOffsets] = useState<number[]>([]);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastProgressRef = useRef<number>(0);
+  const lastDragTime = useRef<number>(0);
   
   const researchData = [
     {
@@ -54,52 +60,161 @@ export default function CarouselSection() {
     }
   ];
 
-  // Use CSS custom property for transform (much more performant)
+  // Callback ref pattern for better ref management
+  const setCardRef = useCallback((index: number) => (el: HTMLDivElement | null) => {
+    if (el) {
+      cardRefs.current.set(index, el);
+    } else {
+      cardRefs.current.delete(index);
+    }
+  }, []);
+
+  // Check for reduced motion preference
   useEffect(() => {
-    const handleScroll = () => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // Calculate parallax offsets for each card
+  const calculateParallaxOffsets = useCallback(() => {
+    if (prefersReducedMotion || !trackRef.current) {
+      setParallaxOffsets([]);
+      return;
+    }
+
+    const newOffsets: number[] = [];
+    cardRefs.current.forEach((card, index) => {
+      const cardRect = card.getBoundingClientRect();
+      const viewportCenter = window.innerWidth / 2;
+      const cardCenter = cardRect.left + cardRect.width / 2;
+      
+      const distanceFromCenter = (cardCenter - viewportCenter) / window.innerWidth;
+      const easedDistance = Math.sign(distanceFromCenter) * Math.pow(Math.abs(distanceFromCenter), 0.7);
+      
+      newOffsets[index] = easedDistance * 30;
+    });
+    
+    setParallaxOffsets(newOffsets);
+  }, [prefersReducedMotion]);
+
+  // Main scroll handler using RAF for smooth animation
+  const handleScroll = useCallback(() => {
+    // Cancel any pending animation frame
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    animationFrameRef.current = requestAnimationFrame(() => {
       if (!sectionRef.current) return;
       
       const rect = sectionRef.current.getBoundingClientRect();
       const scrollProgress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
       
-      // Update progress state for the progress bar
-      setProgress(scrollProgress);
+      // Only update if progress actually changed meaningfully
+      const progressDiff = Math.abs(scrollProgress - lastProgressRef.current);
+      if (progressDiff > 0.001) {
+        setProgress(scrollProgress);
+        
+        if (trackRef.current) {
+          trackRef.current.style.setProperty('--progress', `${scrollProgress * -80}%`);
+        }
+        
+        calculateParallaxOffsets();
+        lastProgressRef.current = scrollProgress;
+      }
       
-      // Update CSS variable for carousel transform
-      if (trackRef.current) {
-        trackRef.current.style.setProperty('--progress', `${scrollProgress * -80}%`);
+      animationFrameRef.current = null;
+    });
+  }, [calculateParallaxOffsets]);
+
+  // Resize handler
+  const handleResize = useCallback(() => {
+    calculateParallaxOffsets();
+  }, [calculateParallaxOffsets]);
+
+  useEffect(() => {
+    // Initial setup
+    handleScroll();
+    setTimeout(() => calculateParallaxOffsets(), 100); // Delay for image loading
+    
+    // Add listeners
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
+  }, [handleScroll, handleResize, calculateParallaxOffsets]);
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial call
-    
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Simple drag handler
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Mouse drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!trackRef.current) return;
     setIsDragging(true);
     setStartX(e.pageX - trackRef.current.offsetLeft);
     setScrollLeft(trackRef.current.scrollLeft);
-  };
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging || !trackRef.current) return;
     e.preventDefault();
     const x = e.pageX - trackRef.current.offsetLeft;
     const walk = (x - startX) * 2;
     trackRef.current.scrollLeft = scrollLeft - walk;
-  };
+    
+    // Throttle parallax during drag
+    const now = Date.now();
+    if (now - lastDragTime.current > 16) {
+      calculateParallaxOffsets();
+      lastDragTime.current = now;
+    }
+  }, [isDragging, startX, scrollLeft, calculateParallaxOffsets]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
+
+  // Touch handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!trackRef.current) return;
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX - trackRef.current.offsetLeft);
+    setScrollLeft(trackRef.current.scrollLeft);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !trackRef.current) return;
+    e.preventDefault();
+    
+    const x = e.touches[0].pageX - trackRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    trackRef.current.scrollLeft = scrollLeft - walk;
+    
+    // Throttle parallax during touch
+    const now = Date.now();
+    if (now - lastDragTime.current > 16) {
+      calculateParallaxOffsets();
+      lastDragTime.current = now;
+    }
+  }, [isDragging, startX, scrollLeft, calculateParallaxOffsets]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   return (
     <section 
@@ -121,16 +236,20 @@ export default function CarouselSection() {
             className="flex gap-[4vmin] cursor-grab active:cursor-grabbing select-none"
             style={{
               transform: 'translateX(calc(50% + var(--progress, 0)))',
-              transition: isDragging ? 'none' : 'transform 0.1s linear',
+              transition: isDragging ? 'none' : 'transform 0.05s ease-out',
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             {researchData.map((item, index) => (
               <div
                 key={index}
+                ref={setCardRef(index)}
                 className="relative flex-shrink-0 rounded-lg overflow-hidden"
                 style={{
                   width: '30vmin',
@@ -143,7 +262,15 @@ export default function CarouselSection() {
                     alt={`Research ${index + 1}`}
                     fill
                     className="object-cover"
-                    sizes="30vmin"
+                    style={{
+                      objectPosition: prefersReducedMotion 
+                        ? '50% 50%' 
+                        : `${50 - (parallaxOffsets[index] || 0)}% 50%`,
+                      willChange: isDragging ? 'object-position' : 'auto',
+                      transition: prefersReducedMotion ? 'none' : 'object-position 0.1s ease-out',
+                    }}
+                    sizes="(max-width: 768px) 50vw, 30vmin"
+                    priority={index < 3}
                     loading={index < 3 ? "eager" : "lazy"}
                   />
                 </div>
