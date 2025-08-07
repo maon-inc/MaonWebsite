@@ -5,7 +5,7 @@ import logoAnimation from "../../../../public/animations/logo/moving_logo.json";
 
 export default function HeroSection() {
   return (
-    <section className="relative px-20 py-24">
+    <section className="relative pt-30 pb-60 px-20 py-24">
       <div className="max-w-7xl mx-auto flex items-start justify-between">
         {/* Left Side - Title and Subtitle */}
         <div className="flex-1 max-w-3xl">
@@ -22,7 +22,7 @@ export default function HeroSection() {
         </div>
 
         {/* Right Side - Logo Animation */}
-        <div className="absolute right-0 top-0 w-[750px] h-[650px] overflow-hidden">
+        <div className="absolute right-0 top-30 w-[750px] h-[650px] overflow-hidden">
           <Lottie
             animationData={logoAnimation}
             loop={true}

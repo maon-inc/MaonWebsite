@@ -6,7 +6,7 @@ import logoAnimation from "../../../public/animations/logo/moving_logo.json";
 
 export default function HeroSection() {
   return (
-    <section className="bg-[#ebe6df] px-12 pb-12">
+    <section className="bg-[#ebe6df] px-12 pb-40">
       <Link href="/product" className="block">
         <div className="group relative bg-black/[0.08] rounded-[40px] overflow-hidden mx-auto max-w-[1380px] h-[650px] flex cursor-pointer">
         {/* Left Side Content */}

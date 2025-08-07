@@ -92,7 +92,7 @@ export default function ServiceAndUniqueSection() {
   return (
     <>
       {/* Service Section */}
-      <section className="px-[60px] mt-8 ml-12">
+      <section className="px-[60px] mt-5 ml-12">
         <div className="flex gap-[65px] items-start">
           {/* Left side - iPhone mockup */}
           <div className="flex-shrink-0">
@@ -144,7 +144,7 @@ export default function ServiceAndUniqueSection() {
       </section>
 
       {/* What Makes Us Unique Section */}
-      <section className="bg-[#f5efe8] mt-[-210px] py-16 px-24 min-h-[729px]">
+      <section className="bg-[#f5efe8] mt-[-210px] pt-30 pb-30 py-16 px-24 min-h-[729px]">
         <p className="libre-bodoni-regular text-center text-[30px] text-[#313233] mb-8 tracking-[-0.2333px]">
           This is what makes us unique
         </p>

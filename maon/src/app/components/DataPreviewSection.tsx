@@ -18,7 +18,7 @@ const chartImages = [
 const idealChart = "/placeholder_main.png";
 
 export const DataPreviewSection: React.FC = () => (
-  <section id="data" className="py-16">
+  <section id="data" className="py-16 pt-30 pb-30">
     <div className="mx-auto max-w-7xl px-4">
       <p className="libre-bodoni-regular text-center text-[30px] text-[#313233] mb-8 tracking-[-0.2333px]">
         Maon gives you everything you need to know

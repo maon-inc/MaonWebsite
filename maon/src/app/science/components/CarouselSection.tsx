@@ -240,10 +240,10 @@ export default function CarouselSection() {
       ref={sectionRef}
       className="h-[300vh] relative"
     >
-      <div className="sticky top-0 h-screen bg-[#F2DDCE] overflow-hidden">
+      <div className="sticky top-0 h-screen bg-[#ECDFCC] overflow-hidden">
         {/* Title */}
         <div className="absolute top-16 left-20 z-10">
-          <h2 className="font-geist-sans font-semibold text-4xl text-[#313233] tracking-tight">
+          <h2 className="font-geist-sans font-semibold text-4xl text-[#000000] tracking-tight">
             Research behind the technology
           </h2>
         </div>
@@ -269,10 +269,10 @@ export default function CarouselSection() {
               <div
                 key={index}
                 ref={setCardRef(index)}
-                className="relative flex-shrink-0 rounded-lg overflow-hidden"
+                className="relative flex-shrink-0 overflow-hidden"
                 style={{
-                  width: '30vmin',
-                  height: '42vmin',
+                  width: '45vmin',
+                  height: '50vmin',
                 }}
               >
                 <div className="relative w-full h-full">
@@ -296,13 +296,13 @@ export default function CarouselSection() {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60 pointer-events-none" />
                 
                 <div className="absolute top-4 left-4 right-4 pointer-events-none">
-                  <h3 className="font-geist-sans font-semibold text-white text-lg leading-tight">
+                  <h3 className="font-geist-sans font-semibold text-white text-[24px] leading-tight pl-5 pr-5 pt-5">
                     {item.title}
                   </h3>
                 </div>
                 
                 <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
-                  <p className="font-geist-sans text-white text-sm leading-tight">
+                  <p className="font-geist-sans text-white text-[18px] leading-tight pl-5 pr-5 pb-5">
                     {item.subtitle}
                   </p>
                 </div>
