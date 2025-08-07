@@ -13,8 +13,7 @@ export default function CarouselSection() {
   const [progress, setProgress] = useState(0);
   const [parallaxOffsets, setParallaxOffsets] = useState<number[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastProgressRef = useRef<number>(0);
+  const ticking = useRef(false);
   const lastDragTime = useRef<number>(0);
   
   const researchData = [
@@ -104,58 +103,65 @@ export default function CarouselSection() {
     setParallaxOffsets(newOffsets);
   }, [prefersReducedMotion]);
 
-  // Main scroll handler using RAF for smooth animation
-  const handleScroll = useCallback(() => {
-    // Cancel any pending animation frame
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
+  // Update function that runs in RAF
+  const updateProgress = useCallback(() => {
+    if (!sectionRef.current) {
+      ticking.current = false;
+      return;
     }
     
-    animationFrameRef.current = requestAnimationFrame(() => {
-      if (!sectionRef.current) return;
-      
-      const rect = sectionRef.current.getBoundingClientRect();
-      const scrollProgress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
-      
-      // Only update if progress actually changed meaningfully
-      const progressDiff = Math.abs(scrollProgress - lastProgressRef.current);
-      if (progressDiff > 0.001) {
-        setProgress(scrollProgress);
-        
-        if (trackRef.current) {
-          trackRef.current.style.setProperty('--progress', `${scrollProgress * -80}%`);
-        }
-        
-        calculateParallaxOffsets();
-        lastProgressRef.current = scrollProgress;
-      }
-      
-      animationFrameRef.current = null;
-    });
+    const rect = sectionRef.current.getBoundingClientRect();
+    const scrollProgress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+    
+    setProgress(scrollProgress);
+    
+    // Directly update transform without transition for immediate response
+    if (trackRef.current) {
+      const translateValue = scrollProgress * -80;
+      trackRef.current.style.transform = `translateX(calc(50% + ${translateValue}%))`;
+    }
+    
+    calculateParallaxOffsets();
+    ticking.current = false;
   }, [calculateParallaxOffsets]);
+
+  // Request animation frame wrapper
+  const requestTick = useCallback(() => {
+    if (!ticking.current) {
+      requestAnimationFrame(updateProgress);
+      ticking.current = true;
+    }
+  }, [updateProgress]);
+
+  // Simplified scroll handler - just request an update
+  const handleScroll = useCallback(() => {
+    requestTick();
+  }, [requestTick]);
 
   // Resize handler
   const handleResize = useCallback(() => {
-    calculateParallaxOffsets();
-  }, [calculateParallaxOffsets]);
+    requestTick();
+  }, [requestTick]);
 
   useEffect(() => {
     // Initial setup
-    handleScroll();
-    setTimeout(() => calculateParallaxOffsets(), 100); // Delay for image loading
+    updateProgress();
     
-    // Add listeners
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleResize, { passive: true });
+    // Add listeners - ensure they're passive
+    const scrollOptions = { passive: true };
+    window.addEventListener('scroll', handleScroll, scrollOptions);
+    window.addEventListener('resize', handleResize, scrollOptions);
+    
+    // Also listen to wheel events for immediate response
+    const handleWheel = () => requestTick();
+    window.addEventListener('wheel', handleWheel, scrollOptions);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      window.removeEventListener('wheel', handleWheel);
     };
-  }, [handleScroll, handleResize, calculateParallaxOffsets]);
+  }, [handleScroll, handleResize, requestTick, updateProgress]);
 
   // Mouse drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -163,6 +169,8 @@ export default function CarouselSection() {
     setIsDragging(true);
     setStartX(e.pageX - trackRef.current.offsetLeft);
     setScrollLeft(trackRef.current.scrollLeft);
+    // Remove transition during drag
+    trackRef.current.style.transition = 'none';
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -181,10 +189,16 @@ export default function CarouselSection() {
   }, [isDragging, startX, scrollLeft, calculateParallaxOffsets]);
 
   const handleMouseLeave = useCallback(() => {
+    if (isDragging && trackRef.current) {
+      trackRef.current.style.transition = '';
+    }
     setIsDragging(false);
-  }, []);
+  }, [isDragging]);
 
   const handleMouseUp = useCallback(() => {
+    if (trackRef.current) {
+      trackRef.current.style.transition = '';
+    }
     setIsDragging(false);
   }, []);
 
@@ -194,6 +208,8 @@ export default function CarouselSection() {
     setIsDragging(true);
     setStartX(e.touches[0].pageX - trackRef.current.offsetLeft);
     setScrollLeft(trackRef.current.scrollLeft);
+    // Remove transition during touch
+    trackRef.current.style.transition = 'none';
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -213,6 +229,9 @@ export default function CarouselSection() {
   }, [isDragging, startX, scrollLeft, calculateParallaxOffsets]);
 
   const handleTouchEnd = useCallback(() => {
+    if (trackRef.current) {
+      trackRef.current.style.transition = '';
+    }
     setIsDragging(false);
   }, []);
 
@@ -235,8 +254,8 @@ export default function CarouselSection() {
             ref={trackRef}
             className="flex gap-[4vmin] cursor-grab active:cursor-grabbing select-none"
             style={{
-              transform: 'translateX(calc(50% + var(--progress, 0)))',
-              transition: isDragging ? 'none' : 'transform 0.05s ease-out',
+              willChange: 'transform',
+              // Transform is now set directly in JavaScript
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -267,7 +286,6 @@ export default function CarouselSection() {
                         ? '50% 50%' 
                         : `${50 - (parallaxOffsets[index] || 0)}% 50%`,
                       willChange: isDragging ? 'object-position' : 'auto',
-                      transition: prefersReducedMotion ? 'none' : 'object-position 0.1s ease-out',
                     }}
                     sizes="(max-width: 768px) 50vw, 30vmin"
                     priority={index < 3}
