@@ -10,7 +10,7 @@ export default function Navigation() {
   return (
     <nav className="flex items-center justify-between px-20 py-6">
       {/* Logo */}
-      <div className="flex items-center" onClick={() => router.push("/")}>
+      <Link href="/" className="flex items-center">
         <Image
           src="/logo.png"
           alt="MAON Logo"
@@ -18,7 +18,7 @@ export default function Navigation() {
           height={40}
           priority
         />
-      </div>
+      </Link>
 
       {/* Right Side Navigation */}
       <div className="flex items-center gap-16">

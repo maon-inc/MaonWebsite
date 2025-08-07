@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import Lottie from "lottie-react";
 import logoAnimation from "../../../public/animations/logo/moving_logo.json";
 
 export default function HeroSection() {
   return (
     <section className="bg-[#ebe6df] px-12 pb-12">
-      <div className="group relative bg-black/[0.08] rounded-[40px] overflow-hidden mx-auto max-w-[1380px] h-[650px] flex">
+      <Link href="/product" className="block">
+        <div className="group relative bg-black/[0.08] rounded-[40px] overflow-hidden mx-auto max-w-[1380px] h-[650px] flex cursor-pointer">
         {/* Left Side Content */}
         <div className="flex flex-col justify-between p-20 pr-10 flex-1 z-10">
           {/* Title */}
@@ -28,8 +30,8 @@ export default function HeroSection() {
               </span>
             </div>
             
-            {/* Explore Button */}
-            <button className="flex items-center gap-2 hover:opacity-70 transition-opacity self-start">
+            {/* Explore Product Text */}
+            <div className="flex items-center gap-2 self-start">
               <span className="font-geist-sans text-[#313233] border-b border-[#313233] pb-0.5 text-lg tracking-tight transition-all duration-700 group-hover:text-[#fcf8f4] group-hover:border-[#fcf8f4]">
                 Explore our product
               </span>
@@ -38,7 +40,7 @@ export default function HeroSection() {
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="#313233" strokeWidth="1.5" className="transition-colors duration-700 group-hover:stroke-[#fcf8f4]"/>
                 </svg>
               </span>
-            </button>
+            </div>
           </div>
         </div>
         
@@ -61,6 +63,7 @@ export default function HeroSection() {
           </span>
         </div>
       </div>
+      </Link>
     </section>
   );
 }
