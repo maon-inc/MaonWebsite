@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 
-export default function Row1() {
+export default function Row2() {
   const deco1Ref = useRef<HTMLDivElement>(null);
   const deco2Ref = useRef<HTMLDivElement>(null);
   const deco3Ref = useRef<HTMLDivElement>(null);
@@ -28,18 +28,28 @@ export default function Row1() {
   }, []);
 
   return (
-    <div className="relative w-full h-[80vh] flex items-center justify-center">
+    <div className="bg-[#F0E6DC] relative w-full h-[80vh] flex items-center justify-center">
       {/* Decorative SVGs */}
-      <div ref={deco1Ref} className="absolute top-[25%] left-[25%] z-10 w-12 h-12 transition-transform duration-75 ease-linear">
+      <div ref={deco1Ref} className="absolute top-[8%] left-[14%] w-20 h-20 transition-transform duration-75 ease-linear">
         <Image src="/product/deco1.svg" alt="" fill className="object-contain" />
       </div>
       
-      <div ref={deco2Ref} className="absolute bottom-[10%] left-[12%] w-36 h-36 transition-transform duration-75 ease-linear">
-        <Image src="/product/deco2.svg" alt="" fill className="object-contain" />
+      <div ref={deco2Ref} className="absolute bottom-[10%] right-[10%] w-36 h-36 transition-transform duration-75 ease-linear">
+        <Image src="/product/deco3.svg" alt="" fill className="object-contain" />
       </div>
       
-      <div ref={deco3Ref} className="absolute top-[20%] right-[15%] w-32 h-32 transition-transform duration-75 ease-linear">
-        <Image src="/product/deco3.svg" alt="" fill className="object-contain" />
+      <div ref={deco3Ref} className="absolute top-[12%] right-[23%] z-10 w-16 h-16 transition-transform duration-75 ease-linear">
+        <Image src="/product/deco2.svg" alt="" fill className="object-contain" />
+      </div>
+
+      {/* Text content positioned to the left */}
+      <div className="w-[450px] mr-[50px] z-10 text-right">
+        <h2 className="text-[58px] font-bold italic font-serif leading-[57px] mb-[36px] text-black">
+          Understand your stress
+        </h2>
+        <p className="text-[36px] font-medium leading-[42px] text-black">
+          Maon reads your body's signals to show you exactly how you're feeling and provides AI suggestions to help you feel better.
+        </p>
       </div>
 
       {/* Center content with grey card background */}
@@ -48,19 +58,9 @@ export default function Row1() {
         <div className="absolute inset-0 bg-gray-400 rounded-[30px] transform scale-x-110 scale-y-125 -z-10" />
         
         {/* Main image */}
-        <div className="relative w-[240px] h-[300px]">
-          <Image src="/product/1-1.png" alt="" fill className="object-contain" />
+        <div className="relative w-[400px] h-[450px]">
+          <Image src="/product/2.png" alt="" fill className="object-contain" />
         </div>
-      </div>
-
-      {/* Text content positioned to the right */}
-      <div className=" w-[450px] ml-[100px] z-10">
-        <h2 className="text-[58px] font-bold italic font-serif leading-[57px] mb-[36px] text-black">
-          Just Click!
-        </h2>
-        <p className="text-[36px] font-medium leading-[42px] text-black">
-          Maon will passively regulate your body for you with research-approved haptic interventions
-        </p>
       </div>
     </div>
   );
