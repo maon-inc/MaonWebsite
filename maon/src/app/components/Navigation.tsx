@@ -36,9 +36,9 @@ export default function Navigation() {
         </Link>
         <Link
           href="/demo"
-          className="font-geist-sans font-bold text-base text-[#313233] hover:opacity-70 transition-opacity tracking-tight"
+          className=" font-geist-sans font-bold font-italic text-base text-[16px] text-[#313233] hover:opacity-70 transition-opacity tracking-tight"
         >
-          Demo
+          Join Waitlist
         </Link>
       </div>
     </nav>

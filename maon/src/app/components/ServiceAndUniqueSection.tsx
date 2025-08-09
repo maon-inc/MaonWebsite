@@ -26,6 +26,7 @@ function FeatureCard({
 }: FeatureCardProps) {
   const isActive = isHovered === index;
   const isOtherHovered = isHovered !== null && isHovered !== index;
+  const imageScalePercent = index === 1 ? "85%" : "75%";
 
   return (
     <div
@@ -45,9 +46,10 @@ function FeatureCard({
           <img
             src={imageSrc}
             alt={title}
-            className={`w-[215px] h-[215px] object-cover rounded-lg absolute inset-0 transition-opacity duration-300 ${
+            className={`absolute inset-0 m-auto object-contain rounded-lg transition-opacity duration-300 ${
               isActive ? "opacity-0" : "opacity-100"
             }`}
+            style={{ width: imageScalePercent, height: imageScalePercent }}
           />
 
           {/* Video - visible on hover */}
@@ -161,12 +163,12 @@ export default function ServiceAndUniqueSection() {
             >
               <FeatureCard
                 title="Passive influence on your emotion."
-                imageSrc="/images/1.png"
+                imageSrc="/images/1.svg"
                 videoSrc="/videos/feature1.mp4"
                 index={0}
                 isHovered={hoveredCard}
                 onHover={setHoveredCard}
-                objectPosition="object-[center_80%]"
+                objectPosition="object-[center_70%]"
                 description="Science-backed vibrations that help you focus, stay energized, and feel calm throughout your day."
               />
             </div>
@@ -181,7 +183,7 @@ export default function ServiceAndUniqueSection() {
             >
               <FeatureCard
                 title="Talk with your own body."
-                imageSrc="/images/2.png"
+                imageSrc="/images/2.svg"
                 videoSrc="/videos/feature2.mp4"
                 index={1}
                 isHovered={hoveredCard}
@@ -200,7 +202,7 @@ export default function ServiceAndUniqueSection() {
             >
               <FeatureCard
                 title="Personalized experience that gets better."
-                imageSrc="/images/3.png"
+                imageSrc="/images/3.svg"
                 videoSrc="/videos/feature3.mp4"
                 index={2}
                 isHovered={hoveredCard}
