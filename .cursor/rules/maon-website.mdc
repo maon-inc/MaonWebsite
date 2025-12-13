@@ -1,0 +1,66 @@
+---
+alwaysApply: true
+---
+
+### Cursor Project Rules
+
+This project is a Next.js App Router marketing site.
+
+Stack:
+- Next.js App Router (TypeScript)
+- Tailwind CSS
+- Custom requestAnimationFrame-based motion using CSS variables
+- Separate backend (frontend never owns DB logic)
+
+Do NOT introduce animation libraries (Framer Motion, GSAP, Lenis, etc.).
+Do NOT introduce global state libraries.
+Do NOT refactor folder structure unless explicitly requested.
+
+### Architecture
+
+- Pages under app/(site)/ must be thin composition layers only.
+- Page files may only import section components and pass data.
+
+- Section components live in components/sections/.
+- Section components must not implement scroll logic or animation math.
+
+- Reusable UI primitives live in components/ui/.
+- Site-wide layout components live in components/site/.
+
+### Motion
+
+- All continuous motion must use the custom rAF engine in /motion.
+- React components must NOT compute animation values per frame.
+- Motion math (clamp, lerp, ranges) must live in /motion only.
+- Motion state is exposed via CSS variables (e.g. --p).
+- Tailwind arbitrary values should consume CSS variables.
+
+### Styling
+
+- Tailwind is the primary styling system.
+- Global styles belong in app/globals.css or styles/.
+- Inline styles are allowed only for CSS variables.
+- Background effects (grain, dots, masks) must be CSS-only.
+
+### Backend & data
+
+- Frontend must not call the backend directly.
+- All waitlist submissions go through lib/waitlist/submit.ts.
+- submit.ts calls a Next.js API route that proxies to the backend.
+- Backend URLs and secrets must come from environment variables.
+
+### React usage
+
+- Prefer Server Components by default.
+- Use "use client" only when required.
+- Avoid unnecessary abstraction and premature generalization.
+- Keep files small and focused.
+
+### Hard constraints
+
+DO NOT:
+- Add animation libraries
+- Add scroll-smoothing libraries
+- Add duplicate motion systems
+- Add legacy Pages Router patterns
+- Mix backend logic into the frontend
