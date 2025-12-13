@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Maon Website
 
-## Getting Started
+## Motion System
 
-First, run the development server:
+This project uses a custom requestAnimationFrame-based motion engine for scroll-driven animations. The system is split into two parts:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### `/motion` - Core Engine
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The motion engine (`/motion`) provides a minimal, performant foundation for scroll-based animations:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **`engine.ts`** - Central rAF loop that tracks scroll position, viewport dimensions, time, and velocity. Subscribers receive continuous updates via `subscribe()`.
+- **`math.ts`** - Pure math utilities: `clamp`, `clamp01`, `lerp`, `mapRange`.
+- **`measures.ts`** - DOM measurement utilities for converting element geometry into scroll ranges.
+- **`observe.ts`** - Thin wrappers around ResizeObserver and IntersectionObserver for invalidating measurements and pausing work when offscreen.
+- **`scroll.ts`** - Scroll reading utilities and velocity computation.
+- **`types.ts`** - Shared TypeScript types for `MotionState`, `Subscriber`, and `Range`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The engine maintains a single `MotionState` object and automatically starts/stops the animation loop based on subscriber count. Time is continuous across start/stop cycles, and velocity is calculated for momentum-based effects.
 
-## Learn More
+### `/components/motion` - React Components
 
-To learn more about Next.js, take a look at the following resources:
+React components that consume the motion engine:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **`Scene.tsx`** - Tracks scroll progress through an element's lifecycle. Exposes a `--p` CSS variable (0-1) that can be used with Tailwind arbitrary values. Supports `enter-exit` and `top-top` modes, with optional offset and frame throttling.
+- **`Reveal.tsx`** - Uses IntersectionObserver to reveal elements when they enter the viewport. Applies a CSS class when revealed and can be configured for one-time or repeatable reveals.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All motion state is exposed via CSS variables, allowing React components to remain thin composition layers while Tailwind handles styling based on motion values.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
