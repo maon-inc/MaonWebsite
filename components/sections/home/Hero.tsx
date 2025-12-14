@@ -5,7 +5,7 @@ export default function Hero() {
   return (
     <section className="relative w-full min-h-screen overflow-hidden">
       {/* Dots animation - centered-right in the hero, avoiding left text */}
-      <div className="absolute inset-0 flex items-center justify-end pointer-events-none pr-[400px] z-0">
+      <div className="absolute inset-0 flex items-center justify-end pointer-events-none md:pr-[200px] lg:pr-[400px] z-0">
         <div className="w-full max-w-2xl h-full max-h-[80vh]">
           <HeroDots
             svgUrl="/assets/hero_svg.svg"

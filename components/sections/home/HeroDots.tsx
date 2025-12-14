@@ -65,8 +65,8 @@ function generateFallbackPoints(count: number, width: number, height: number): P
 }
 
 export default function HeroDots({
-  svgUrl = "/assets/hero_svg.svg",
-  count = 1200,
+  svgUrl = "/assets/2.svg",
+  count = 1700,
   dotRadius = 1.8,
   spread = 0.9,
   durationMs = 3000,
