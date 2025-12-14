@@ -1,5 +1,6 @@
 # Maon Website
 
+Maon Intelligence's Official Website
 ## Motion System
 
 This project uses a custom requestAnimationFrame-based motion engine for scroll-driven animations. The system is split into two parts:
