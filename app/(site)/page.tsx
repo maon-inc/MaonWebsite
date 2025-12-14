@@ -42,9 +42,13 @@ export default function HomePage() {
           <section className="relative min-h-screen">
             <HeroText />
           </section>
-          {/* Second section: Problem appears after scrolling 1 screen */}
-          <section className="min-h-screen flex items-center justify-center">
-            <Problem />
+
+          {/* Problem section with sticky scroll effect */}
+          {/* Height of 300vh gives ~2 screens of scrolling while text stays pinned */}
+          <section className="relative h-[300vh]">
+            <div className="sticky top-0 h-screen flex items-center justify-center">
+              <Problem />
+            </div>
           </section>
         </div>
 
@@ -58,4 +62,3 @@ export default function HomePage() {
     </main>
   );
 }
-
