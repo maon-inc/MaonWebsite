@@ -10,6 +10,17 @@ import {
 } from "@/lib/motion/svgSample";
 import { observeResize } from "@/motion/observe";
 
+type TargetAnchor = 
+  | "center" 
+  | "center-left" 
+  | "center-right" 
+  | "top-center" 
+  | "top-left" 
+  | "top-right" 
+  | "bottom-center" 
+  | "bottom-left" 
+  | "bottom-right";
+
 type Props = {
   svgUrl?: string;
   count?: number;
@@ -17,6 +28,9 @@ type Props = {
   spread?: number;
   durationMs?: number;
   className?: string;
+  targetWidth?: number;
+  targetHeight?: number;
+  targetAnchor?: TargetAnchor;
 };
 
 interface Dot {
@@ -37,6 +51,7 @@ interface Dot {
   noiseMult: number;
   swayPhase: number;
   swayAmp: number;
+  coordinatedPhase: boolean;
 }
 
 function generateNoise(t: number, seedA: number, seedB: number): { x: number; y: number } {
@@ -64,13 +79,49 @@ function generateFallbackPoints(count: number, width: number, height: number): P
   return points;
 }
 
+function calculateTargetOffset(
+  canvasWidth: number,
+  canvasHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+  anchor: TargetAnchor
+): { offsetX: number; offsetY: number } {
+  let offsetX = 0;
+  let offsetY = 0;
+
+  // Horizontal position
+  if (anchor.includes("left")) {
+    offsetX = 0;
+  } else if (anchor.includes("right")) {
+    offsetX = canvasWidth - targetWidth;
+  } else {
+    // center
+    offsetX = (canvasWidth - targetWidth) / 2;
+  }
+
+  // Vertical position
+  if (anchor.includes("top")) {
+    offsetY = 0;
+  } else if (anchor.includes("bottom")) {
+    offsetY = canvasHeight - targetHeight;
+  } else {
+    // center
+    offsetY = (canvasHeight - targetHeight) / 2;
+  }
+
+  return { offsetX, offsetY };
+}
+
 export default function HeroDots({
   svgUrl = "/assets/2.svg",
   count = 1700,
   dotRadius = 1.8,
   spread = 0.9,
-  durationMs = 3000,
+  durationMs = 12000,
   className,
+  targetWidth = 500,
+  targetHeight = 500,
+  targetAnchor = "center",
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,6 +166,7 @@ export default function HeroDots({
 
   const initializeDots = (targetPoints: Point[], width: number, height: number) => {
     const dots: Dot[] = [];
+    
     for (let i = 0; i < count; i++) {
       const seed = i * 7919 + 12345;
       const r1 = seededRandom(seed);
@@ -127,20 +179,20 @@ export default function HeroDots({
       const r8 = seededRandom(seed + 7);
       const r9 = seededRandom(seed + 9);
 
-      const radiusVariation = 0.6 + r3 * 0.8; // 0.6-1.4 (larger variation)
+      const radiusVariation = 0.6 + r3 * 0.8;
       const swayPhase = r8 * Math.PI * 2;
-      const swayAmp = 1.2 + r9 * 1.4; // 0.8-2.2px (stronger sway)
+      const swayAmp = 3.5 + r9 * 2.5;
       const target = targetPoints[i % targetPoints.length];
       const home = { x: target.x, y: target.y };
       
-      // Start dots near their target positions with small random offset
-      const offsetDistance = Math.min(width, height) * 0.15; // Small offset from target
-      const angle = r1 * Math.PI * 2;
-      const distance = r2 * offsetDistance;
+      // Start dots randomly scattered across the entire canvas (which is fullscreen)
       const pos = {
-        x: target.x + Math.cos(angle) * distance,
-        y: target.y + Math.sin(angle) * distance,
+        x: r1 * width,
+        y: r2 * height,
       };
+      
+      // Determine if this dot is in the 75% coordinated group
+      const coordinatedPhase = (i % 4) < 3;
 
       const profileType = i % 10;
       let baseStiffness: number;
@@ -149,22 +201,22 @@ export default function HeroDots({
       let noiseFreq: number;
 
       if (profileType < 7) {
-        // 70% stable dots: higher stiffness, lower noise
-        baseStiffness = 8.0 + r4 * 6.0; // Increased for faster convergence
-        baseDamping = 0.90 + r5 * 0.04;
-        baseNoiseAmp = 0.4 + r6 * 0.8;
+        // 70% stable dots - reduced stiffness for slower movement
+        baseStiffness = 4.0 + r4 * 3.0; // Reduced from 8.0 + r4 * 6.0
+        baseDamping = 0.92 + r5 * 0.03; // Slightly higher damping for smoother motion
+        baseNoiseAmp = 2.5 + r6 * 2.0;
         noiseFreq = 0.4 + r7 * 0.2;
       } else if (profileType < 9) {
-        // 20% jitter dots: medium stiffness, medium noise
-        baseStiffness = 5.0 + r4 * 4.0; // Increased for faster convergence
-        baseDamping = 0.88 + r5 * 0.06;
-        baseNoiseAmp = 1.0 + r6 * 1.4;
+        // 20% jitter dots - reduced stiffness
+        baseStiffness = 3.0 + r4 * 2.5; // Reduced from 5.0 + r4 * 4.0
+        baseDamping = 0.90 + r5 * 0.04;
+        baseNoiseAmp = 3.5 + r6 * 2.5;
         noiseFreq = 0.6 + r7 * 0.3;
       } else {
-        // 10% floaters: low stiffness, higher noise, slightly lower damping
-        baseStiffness = 3.0 + r4 * 3.0; // Increased for faster convergence
-        baseDamping = 0.82 + r5 * 0.06;
-        baseNoiseAmp = 1.5 + r6 * 1.7;
+        // 10% floaters - reduced stiffness
+        baseStiffness = 2.0 + r4 * 2.0; // Reduced from 3.0 + r4 * 3.0
+        baseDamping = 0.85 + r5 * 0.05;
+        baseNoiseAmp = 4.5 + r6 * 3.0;
         noiseFreq = 0.5 + r7 * 0.4;
       }
 
@@ -186,13 +238,23 @@ export default function HeroDots({
         noiseMult: 1,
         swayPhase,
         swayAmp,
+        coordinatedPhase,
       });
     }
 
     dotsRef.current = dots;
   };
 
-  const loadTargetsOnly = async (width: number, height: number): Promise<Point[]> => {
+  const loadTargetsOnly = async (canvasWidth: number, canvasHeight: number): Promise<Point[]> => {
+    // Calculate the offset to position the target shape within the canvas
+    const { offsetX, offsetY } = calculateTargetOffset(
+      canvasWidth,
+      canvasHeight,
+      targetWidth,
+      targetHeight,
+      targetAnchor
+    );
+
     let cleanup: (() => void) | null = null;
     try {
       const response = await fetch(svgUrl);
@@ -203,19 +265,15 @@ export default function HeroDots({
       cleanup = cleanupFn;
       if (paths.length === 0) throw new Error("No paths found in SVG");
 
-      // Split dots: 85% outline, 15% interior
       const outlineCount = Math.floor(count * 0.85);
       const interiorCount = count - outlineCount;
 
-      // Sample outline points
       const outlinePoints = samplePointsFromPaths(paths, outlineCount);
       if (outlinePoints.length === 0) throw new Error("Failed to sample outline points");
 
-      // Sample interior points (with fallback to outline if it fails)
       let interiorPoints: Point[] = [];
       try {
         interiorPoints = await samplePointsInFillFromPaths(paths, viewBox, interiorCount, svg);
-        // If we didn't get enough interior points, fill the rest with outline
         if (interiorPoints.length < interiorCount) {
           const additionalOutline = samplePointsFromPaths(
             paths,
@@ -224,21 +282,31 @@ export default function HeroDots({
           interiorPoints = interiorPoints.concat(additionalOutline);
         }
       } catch (error) {
-        // Fallback to outline-only if interior sampling fails
         console.warn("Interior sampling failed, using outline only:", error);
         const additionalOutline = samplePointsFromPaths(paths, interiorCount);
         interiorPoints = additionalOutline;
       }
 
-      // Merge outline and interior points
       const sampledPoints = outlinePoints.concat(interiorPoints);
-
-      const targetPoints = fitPointsToRect(sampledPoints, viewBox, width, height, 0);
+      
+      // Fit SVG to the fixed target size (NOT the canvas size)
+      const fittedPoints = fitPointsToRect(sampledPoints, viewBox, targetWidth, targetHeight, 0);
+      
+      // Offset points to position the shape according to the anchor
+      const targetPoints = fittedPoints.map(p => ({
+        x: p.x + offsetX,
+        y: p.y + offsetY,
+      }));
+      
       return targetPoints;
     } catch (error) {
       console.warn("Failed to load SVG, using fallback:", error);
-      const fallbackPoints = generateFallbackPoints(count, width, height);
-      return fallbackPoints;
+      // Fallback also uses fixed target size and offset
+      const fallbackPoints = generateFallbackPoints(count, targetWidth, targetHeight);
+      return fallbackPoints.map(p => ({
+        x: p.x + offsetX,
+        y: p.y + offsetY,
+      }));
     } finally {
       if (cleanup) {
         cleanup();
@@ -252,15 +320,23 @@ export default function HeroDots({
       const target = targetPoints[i % targetPoints.length];
       dots[i].home.x = target.x;
       dots[i].home.y = target.y;
-      // Zero velocity to prevent "fling" after resize
       dots[i].vel.x = 0;
       dots[i].vel.y = 0;
     }
     targetPointsRef.current = targetPoints;
   };
 
+  // Very gradual easing for slow, cinematic convergence
   const easeOut = (t: number): number => {
-    return 1 - Math.pow(1 - t, 3);
+    return 1 - Math.pow(1 - t, 1.8); // Gentler curve
+  };
+  
+  // Smooth S-curve for even more gradual feel
+  const easeInOutSlow = (t: number): number => {
+    if (t < 0.5) {
+      return 2 * t * t * t; // Slow start
+    }
+    return 1 - Math.pow(-2 * t + 2, 3) / 2; // Slow end
   };
 
   const clamp = (value: number, min: number, max: number): number => {
@@ -272,7 +348,6 @@ export default function HeroDots({
     const startTs = startTsRef.current;
     const phase = phaseRef.current;
 
-    // Determine phase and snap progress
     let snapProgress = 0;
     let isSnapping = false;
     if (startTs !== null && phase === "snap") {
@@ -285,18 +360,32 @@ export default function HeroDots({
     }
     snapProgressRef.current = snapProgress;
 
+    // Global oscillator for coordinated movement
+    const globalOscillatorX = Math.cos(time * 0.3);
+    const globalOscillatorY = Math.sin(time * 0.3 + Math.PI / 4);
+
     for (const dot of dots) {
       const dx = dot.home.x - dot.pos.x;
       const dy = dot.home.y - dot.pos.y;
 
-      // Snap phase: boost stiffness and reduce noise
       let stiffness = dot.baseStiffness * dot.stiffnessMult;
       let noiseAmp = dot.baseNoiseAmp * dot.noiseMult;
       
       if (isSnapping) {
-        const stiffnessBoost = 1 + (12 - 1) * (1 - easeOut(snapProgress));
-        stiffness *= stiffnessBoost;
-        noiseAmp *= (1 - snapProgress) * 0.1;
+        // Use easeInOutSlow for very gradual stiffness change
+        const easedProgress = easeInOutSlow(snapProgress);
+        
+        // Start with very low stiffness, gradually increase
+        // This creates a slow drift at the start that speeds up slightly mid-animation
+        const stiffnessMultiplier = 0.3 + easedProgress * 2.5; // Range: 0.3 to 2.8
+        stiffness *= stiffnessMultiplier;
+        
+        // Minimal noise during convergence
+        noiseAmp *= (1 - snapProgress) * 0.03;
+      } else {
+        // Breathing phase
+        stiffness *= 0.3;
+        noiseAmp *= 1.5;
       }
 
       const damping = dot.baseDamping;
@@ -305,23 +394,43 @@ export default function HeroDots({
       let fx = stiffness * dx;
       let fy = stiffness * dy;
 
-      // Noise (reduced during snap)
-      const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
-      fx += noise.x * noiseAmp;
-      fy += noise.y * noiseAmp;
-
-      // Direct pull during early snap (first ~200ms)
-      if (isSnapping && snapProgress < 0.17) {
-        const pullStrength = 0.12 * easeOut(snapProgress);
-        dot.pos.x += dx * pullStrength;
-        dot.pos.y += dy * pullStrength;
+      // Noise/breathing movement
+      if (isSnapping) {
+        const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
+        fx += noise.x * noiseAmp;
+        fy += noise.y * noiseAmp;
+      } else {
+        if (dot.coordinatedPhase) {
+          const coordAmp = noiseAmp * 0.8;
+          fx += globalOscillatorX * coordAmp;
+          fy += globalOscillatorY * coordAmp;
+          
+          const individualVariation = noiseAmp * 0.3;
+          const noise = generateNoise(time * dot.noiseFreq * 0.5, dot.seedA, dot.seedB);
+          fx += noise.x * individualVariation;
+          fy += noise.y * individualVariation;
+        } else {
+          const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
+          fx += noise.x * noiseAmp;
+          fy += noise.y * noiseAmp;
+        }
       }
 
-      // Reset multipliers to base values
+      // Gentle initial pull - very subtle, mainly for dots far away
+      if (isSnapping && snapProgress < 0.1) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Only apply pull to dots that are very far (coming from edges of screen)
+        if (distance > 200) {
+          const pullStrength = 0.02 * (1 - easeOut(snapProgress * 10));
+          dot.pos.x += dx * pullStrength;
+          dot.pos.y += dy * pullStrength;
+        }
+      }
+
       dot.stiffnessMult = 1;
       dot.noiseMult = 1;
 
-      // Semi-implicit Euler with damping as multiplier
+      // Semi-implicit Euler with damping
       dot.vel.x = (dot.vel.x + fx * dt) * damping;
       dot.vel.y = (dot.vel.y + fy * dt) * damping;
       dot.pos.x += dot.vel.x * dt;
@@ -370,34 +479,52 @@ export default function HeroDots({
     const orangeRgb = hexToRgb("#E29E5B");
 
     const time = timeRef.current;
-    const SWAY_FREQ = 0.4; // Sway frequency (slightly faster for more visible motion)
+    const SWAY_FREQ = 0.35;
+    const phase = phaseRef.current;
+    const isBreathing = phase === "breathe";
 
     for (const dot of dots) {
-      // Calculate distance to home (using actual pos, not swayed)
+      // Skip dots that are way outside the canvas (optimization)
+      if (dot.pos.x < -50 || dot.pos.x > width + 50 || 
+          dot.pos.y < -50 || dot.pos.y > height + 50) {
+        continue;
+      }
+
       const dx = dot.pos.x - dot.home.x;
       const dy = dot.pos.y - dot.home.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
-      // Color based on distance to home
       const t = Math.min(dist / SETTLED_PX, 1);
-      const easedT = easeOut(1 - t); // Invert so closer = more orange
+      const easedT = easeOut(1 - t);
       
       const r = lerp(grayRgb.r, orangeRgb.r, easedT);
       const g = lerp(grayRgb.g, orangeRgb.g, easedT);
       const b = lerp(grayRgb.b, orangeRgb.b, easedT);
       ctx.fillStyle = rgbToHex(r, g, b);
 
-      // Calculate sway offset
-      const swayX = Math.sin(time * SWAY_FREQ + dot.swayPhase) * dot.swayAmp;
-      const swayY = Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) * dot.swayAmp;
+      let swayX: number;
+      let swayY: number;
+      
+      if (isBreathing && dot.coordinatedPhase) {
+        const globalPhase = time * 0.3;
+        swayX = Math.sin(globalPhase + dot.swayPhase * 0.5) * dot.swayAmp;
+        swayY = Math.cos(globalPhase + dot.swayPhase * 0.7) * dot.swayAmp;
+      } else {
+        swayX = Math.sin(time * SWAY_FREQ + dot.swayPhase) * dot.swayAmp;
+        swayY = Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) * dot.swayAmp;
+      }
 
-      // Clamp drawing position to canvas bounds (accounting for dot radius)
-      const drawX = Math.max(dot.radius, Math.min(width - dot.radius, dot.pos.x + swayX));
-      const drawY = Math.max(dot.radius, Math.min(height - dot.radius, dot.pos.y + swayY));
+      // Allow dots to be drawn slightly outside canvas during convergence
+      const drawX = dot.pos.x + swayX;
+      const drawY = dot.pos.y + swayY;
 
-      ctx.beginPath();
-      ctx.arc(drawX, drawY, dot.radius, 0, Math.PI * 2);
-      ctx.fill();
+      // Only draw if within extended bounds
+      if (drawX >= -dot.radius && drawX <= width + dot.radius &&
+          drawY >= -dot.radius && drawY <= height + dot.radius) {
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, dot.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   };
 
@@ -424,7 +551,6 @@ export default function HeroDots({
       return;
     }
 
-    // Initialize start time on first frame
     if (startTsRef.current === null) {
       startTsRef.current = timestamp;
       phaseRef.current = "snap";
@@ -434,7 +560,6 @@ export default function HeroDots({
       lastTimeRef.current = timestamp;
     }
 
-    // Cap dt for stability
     const rawDt = (timestamp - lastTimeRef.current) / 1000;
     const dt = Math.min(rawDt, 0.033);
     lastTimeRef.current = timestamp;
@@ -457,7 +582,6 @@ export default function HeroDots({
     const size = setupCanvas();
     if (!size) return;
 
-    // Initial mount: load targets and initialize dots
     loadTargetsOnly(size.width, size.height).then((targetPoints) => {
       targetPointsRef.current = targetPoints;
       initializeDots(targetPoints, size.width, size.height);
@@ -486,21 +610,17 @@ export default function HeroDots({
       }
     });
 
-    // Resize handler with debouncing
     const stopResize = observeResize(container, () => {
-      // Cancel pending resize
       if (resizeRafRef.current !== null) {
         cancelAnimationFrame(resizeRafRef.current);
       }
 
-      // Debounce resize using requestAnimationFrame
       resizeRafRef.current = requestAnimationFrame(() => {
         resizeRafRef.current = null;
 
         const newSize = setupCanvas();
         if (!newSize) return;
 
-        // Check if count changed - if so, reinitialize
         if (dotsRef.current.length !== count) {
           loadTargetsOnly(newSize.width, newSize.height).then((targetPoints) => {
             targetPointsRef.current = targetPoints;
@@ -515,10 +635,8 @@ export default function HeroDots({
           return;
         }
 
-        // Normal resize: retarget existing dots
         loadTargetsOnly(newSize.width, newSize.height).then((targetPoints) => {
           retargetDots(targetPoints);
-          // Do NOT restart RAF if already running
         });
       });
     });
@@ -532,7 +650,7 @@ export default function HeroDots({
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [svgUrl, count, dotRadius, spread, durationMs]);
+  }, [svgUrl, count, dotRadius, spread, durationMs, targetWidth, targetHeight, targetAnchor]);
 
   return (
     <div ref={containerRef} className={className} style={{ position: "relative", width: "100%", height: "100%" }}>

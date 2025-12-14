@@ -3,16 +3,17 @@ import Nav from "@/components/site/Nav";
 
 export default function Hero() {
   return (
-    <section className="relative w-full min-h-screen overflow-hidden">
-      {/* Dots animation - centered-right in the hero, avoiding left text */}
-      <div className="absolute inset-0 flex items-center justify-end pointer-events-none md:pr-[200px] lg:pr-[400px] z-0">
-        <div className="w-full max-w-2xl h-full max-h-[80vh]">
-          <HeroDots
-            svgUrl="/assets/hero_svg.svg"
-            count={1200}
-            className="w-full h-full"
-          />
-        </div>
+    <section className="relative w-full h-screen overflow-hidden">
+      {/* Dots animation - fullscreen canvas with centered SVG target */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        <HeroDots
+          svgUrl="/assets/hero_svg.svg"
+          count={1200}
+          targetWidth={500}
+          targetHeight={500}
+          targetAnchor="center"
+          className="w-full h-full"
+        />
       </div>
 
       {/* Left text block - absolute bottom-left */}
