@@ -37,6 +37,7 @@ interface Dot {
   pos: { x: number; y: number };
   vel: { x: number; y: number };
   home: { x: number; y: number };
+  startPos: { x: number; y: number };
   radius: number;
   stiffness: number;
   damping: number;
@@ -89,23 +90,19 @@ function calculateTargetOffset(
   let offsetX = 0;
   let offsetY = 0;
 
-  // Horizontal position
   if (anchor.includes("left")) {
     offsetX = 0;
   } else if (anchor.includes("right")) {
     offsetX = canvasWidth - targetWidth;
   } else {
-    // center
     offsetX = (canvasWidth - targetWidth) / 2;
   }
 
-  // Vertical position
   if (anchor.includes("top")) {
     offsetY = 0;
   } else if (anchor.includes("bottom")) {
     offsetY = canvasHeight - targetHeight;
   } else {
-    // center
     offsetY = (canvasHeight - targetHeight) / 2;
   }
 
@@ -113,11 +110,11 @@ function calculateTargetOffset(
 }
 
 export default function HeroDots({
-  svgUrl = "/assets/2.svg",
+  svgUrl = "/assets/hero_svg.svg",
   count = 1700,
   dotRadius = 1.8,
   spread = 0.9,
-  durationMs = 12000,
+  durationMs = 5000,
   className,
   targetWidth = 500,
   targetHeight = 500,
@@ -130,11 +127,15 @@ export default function HeroDots({
   const rafIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
-  const phaseRef = useRef<"snap" | "breathe">("snap");
+  const phaseRef = useRef<"snap" | "transition" | "breathe">("snap");
   const snapProgressRef = useRef<number>(0);
+  const transitionProgressRef = useRef<number>(0);
   const timeRef = useRef<number>(0);
   const prefersReducedMotionRef = useRef(false);
   const resizeRafRef = useRef<number | null>(null);
+
+  // Transition duration from snap to breathing (in ms)
+  const transitionDurationMs = 2000;
 
   const setupCanvas = () => {
     const canvas = canvasRef.current;
@@ -185,13 +186,11 @@ export default function HeroDots({
       const target = targetPoints[i % targetPoints.length];
       const home = { x: target.x, y: target.y };
       
-      // Start dots randomly scattered across the entire canvas (which is fullscreen)
-      const pos = {
-        x: r1 * width,
-        y: r2 * height,
-      };
+      const startX = r1 * width;
+      const startY = r2 * height;
+      const pos = { x: startX, y: startY };
+      const startPos = { x: startX, y: startY };
       
-      // Determine if this dot is in the 75% coordinated group
       const coordinatedPhase = (i % 4) < 3;
 
       const profileType = i % 10;
@@ -201,20 +200,17 @@ export default function HeroDots({
       let noiseFreq: number;
 
       if (profileType < 7) {
-        // 70% stable dots - reduced stiffness for slower movement
-        baseStiffness = 4.0 + r4 * 3.0; // Reduced from 8.0 + r4 * 6.0
-        baseDamping = 0.92 + r5 * 0.03; // Slightly higher damping for smoother motion
+        baseStiffness = 4.0 + r4 * 3.0;
+        baseDamping = 0.92 + r5 * 0.03;
         baseNoiseAmp = 2.5 + r6 * 2.0;
         noiseFreq = 0.4 + r7 * 0.2;
       } else if (profileType < 9) {
-        // 20% jitter dots - reduced stiffness
-        baseStiffness = 3.0 + r4 * 2.5; // Reduced from 5.0 + r4 * 4.0
+        baseStiffness = 3.0 + r4 * 2.5;
         baseDamping = 0.90 + r5 * 0.04;
         baseNoiseAmp = 3.5 + r6 * 2.5;
         noiseFreq = 0.6 + r7 * 0.3;
       } else {
-        // 10% floaters - reduced stiffness
-        baseStiffness = 2.0 + r4 * 2.0; // Reduced from 3.0 + r4 * 3.0
+        baseStiffness = 2.0 + r4 * 2.0;
         baseDamping = 0.85 + r5 * 0.05;
         baseNoiseAmp = 4.5 + r6 * 3.0;
         noiseFreq = 0.5 + r7 * 0.4;
@@ -224,6 +220,7 @@ export default function HeroDots({
         pos,
         vel: { x: 0, y: 0 },
         home,
+        startPos,
         radius: dotRadius * radiusVariation,
         stiffness: baseStiffness,
         damping: baseDamping,
@@ -246,7 +243,6 @@ export default function HeroDots({
   };
 
   const loadTargetsOnly = async (canvasWidth: number, canvasHeight: number): Promise<Point[]> => {
-    // Calculate the offset to position the target shape within the canvas
     const { offsetX, offsetY } = calculateTargetOffset(
       canvasWidth,
       canvasHeight,
@@ -288,11 +284,8 @@ export default function HeroDots({
       }
 
       const sampledPoints = outlinePoints.concat(interiorPoints);
-      
-      // Fit SVG to the fixed target size (NOT the canvas size)
       const fittedPoints = fitPointsToRect(sampledPoints, viewBox, targetWidth, targetHeight, 0);
       
-      // Offset points to position the shape according to the anchor
       const targetPoints = fittedPoints.map(p => ({
         x: p.x + offsetX,
         y: p.y + offsetY,
@@ -301,7 +294,6 @@ export default function HeroDots({
       return targetPoints;
     } catch (error) {
       console.warn("Failed to load SVG, using fallback:", error);
-      // Fallback also uses fixed target size and offset
       const fallbackPoints = generateFallbackPoints(count, targetWidth, targetHeight);
       return fallbackPoints.map(p => ({
         x: p.x + offsetX,
@@ -326,17 +318,22 @@ export default function HeroDots({
     targetPointsRef.current = targetPoints;
   };
 
-  // Very gradual easing for slow, cinematic convergence
   const easeOut = (t: number): number => {
-    return 1 - Math.pow(1 - t, 1.8); // Gentler curve
+    return 1 - Math.pow(1 - t, 1.8);
   };
   
-  // Smooth S-curve for even more gradual feel
-  const easeInOutSlow = (t: number): number => {
-    if (t < 0.5) {
-      return 2 * t * t * t; // Slow start
-    }
-    return 1 - Math.pow(-2 * t + 2, 3) / 2; // Slow end
+  const easeInOutCubic = (t: number): number => {
+    return t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  };
+
+  const easeOutQuad = (t: number): number => {
+    return 1 - (1 - t) * (1 - t);
+  };
+
+  const lerp = (a: number, b: number, t: number): number => {
+    return a + (b - a) * t;
   };
 
   const clamp = (value: number, min: number, max: number): number => {
@@ -349,57 +346,59 @@ export default function HeroDots({
     const phase = phaseRef.current;
 
     let snapProgress = 0;
-    let isSnapping = false;
-    if (startTs !== null && phase === "snap") {
+    let transitionProgress = 0;
+
+    if (startTs !== null) {
       const elapsed = timestamp - startTs;
-      snapProgress = clamp(elapsed / durationMs, 0, 1);
-      isSnapping = snapProgress < 1;
-      if (!isSnapping && phase === "snap") {
-        phaseRef.current = "breathe";
+      
+      if (phase === "snap") {
+        snapProgress = clamp(elapsed / durationMs, 0, 1);
+        if (snapProgress >= 1) {
+          phaseRef.current = "transition";
+          transitionProgressRef.current = 0;
+        }
+      } else if (phase === "transition") {
+        snapProgress = 1;
+        const transitionElapsed = elapsed - durationMs;
+        transitionProgress = clamp(transitionElapsed / transitionDurationMs, 0, 1);
+        transitionProgressRef.current = transitionProgress;
+        if (transitionProgress >= 1) {
+          phaseRef.current = "breathe";
+        }
+      } else {
+        snapProgress = 1;
+        transitionProgress = 1;
       }
     }
     snapProgressRef.current = snapProgress;
 
-    // Global oscillator for coordinated movement
     const globalOscillatorX = Math.cos(time * 0.3);
     const globalOscillatorY = Math.sin(time * 0.3 + Math.PI / 4);
 
+    const easedSnapProgress = easeInOutCubic(snapProgress);
+    const easedTransitionProgress = easeOutQuad(transitionProgress);
+
     for (const dot of dots) {
-      const dx = dot.home.x - dot.pos.x;
-      const dy = dot.home.y - dot.pos.y;
+      if (phase === "snap") {
+        // SNAP PHASE: Lerp from start to home
+        dot.pos.x = lerp(dot.startPos.x, dot.home.x, easedSnapProgress);
+        dot.pos.y = lerp(dot.startPos.y, dot.home.y, easedSnapProgress);
+        dot.vel.x = 0;
+        dot.vel.y = 0;
+      } else if (phase === "transition") {
+        // TRANSITION PHASE: Gradually introduce breathing movement
+        const dx = dot.home.x - dot.pos.x;
+        const dy = dot.home.y - dot.pos.y;
 
-      let stiffness = dot.baseStiffness * dot.stiffnessMult;
-      let noiseAmp = dot.baseNoiseAmp * dot.noiseMult;
-      
-      if (isSnapping) {
-        // Use easeInOutSlow for very gradual stiffness change
-        const easedProgress = easeInOutSlow(snapProgress);
-        
-        // Start with very low stiffness, gradually increase
-        // This creates a slow drift at the start that speeds up slightly mid-animation
-        const stiffnessMultiplier = 0.3 + easedProgress * 2.5; // Range: 0.3 to 2.8
-        stiffness *= stiffnessMultiplier;
-        
-        // Minimal noise during convergence
-        noiseAmp *= (1 - snapProgress) * 0.03;
-      } else {
-        // Breathing phase
-        stiffness *= 0.3;
-        noiseAmp *= 1.5;
-      }
+        // Gradually reduce stiffness and increase noise over the transition
+        const stiffness = dot.baseStiffness * lerp(2.0, 0.3, easedTransitionProgress);
+        const noiseAmp = dot.baseNoiseAmp * lerp(0.0, 1.5, easedTransitionProgress);
+        const damping = dot.baseDamping;
 
-      const damping = dot.baseDamping;
+        let fx = stiffness * dx;
+        let fy = stiffness * dy;
 
-      // Spring force toward home
-      let fx = stiffness * dx;
-      let fy = stiffness * dy;
-
-      // Noise/breathing movement
-      if (isSnapping) {
-        const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
-        fx += noise.x * noiseAmp;
-        fy += noise.y * noiseAmp;
-      } else {
+        // Gradually introduce noise
         if (dot.coordinatedPhase) {
           const coordAmp = noiseAmp * 0.8;
           fx += globalOscillatorX * coordAmp;
@@ -414,32 +413,44 @@ export default function HeroDots({
           fx += noise.x * noiseAmp;
           fy += noise.y * noiseAmp;
         }
-      }
 
-      // Gentle initial pull - very subtle, mainly for dots far away
-      if (isSnapping && snapProgress < 0.1) {
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        // Only apply pull to dots that are very far (coming from edges of screen)
-        if (distance > 200) {
-          const pullStrength = 0.02 * (1 - easeOut(snapProgress * 10));
-          dot.pos.x += dx * pullStrength;
-          dot.pos.y += dy * pullStrength;
+        dot.vel.x = (dot.vel.x + fx * dt) * damping;
+        dot.vel.y = (dot.vel.y + fy * dt) * damping;
+        dot.pos.x += dot.vel.x * dt;
+        dot.pos.y += dot.vel.y * dt;
+      } else {
+        // BREATHING PHASE: Full spring physics with noise
+        const dx = dot.home.x - dot.pos.x;
+        const dy = dot.home.y - dot.pos.y;
+
+        const stiffness = dot.baseStiffness * 0.3;
+        const noiseAmp = dot.baseNoiseAmp * 1.5;
+        const damping = dot.baseDamping;
+
+        let fx = stiffness * dx;
+        let fy = stiffness * dy;
+
+        if (dot.coordinatedPhase) {
+          const coordAmp = noiseAmp * 0.8;
+          fx += globalOscillatorX * coordAmp;
+          fy += globalOscillatorY * coordAmp;
+          
+          const individualVariation = noiseAmp * 0.3;
+          const noise = generateNoise(time * dot.noiseFreq * 0.5, dot.seedA, dot.seedB);
+          fx += noise.x * individualVariation;
+          fy += noise.y * individualVariation;
+        } else {
+          const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
+          fx += noise.x * noiseAmp;
+          fy += noise.y * noiseAmp;
         }
+
+        dot.vel.x = (dot.vel.x + fx * dt) * damping;
+        dot.vel.y = (dot.vel.y + fy * dt) * damping;
+        dot.pos.x += dot.vel.x * dt;
+        dot.pos.y += dot.vel.y * dt;
       }
-
-      dot.stiffnessMult = 1;
-      dot.noiseMult = 1;
-
-      // Semi-implicit Euler with damping
-      dot.vel.x = (dot.vel.x + fx * dt) * damping;
-      dot.vel.y = (dot.vel.y + fy * dt) * damping;
-      dot.pos.x += dot.vel.x * dt;
-      dot.pos.y += dot.vel.y * dt;
     }
-  };
-
-  const lerp = (a: number, b: number, t: number): number => {
-    return a + (b - a) * t;
   };
 
   const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
@@ -476,15 +487,14 @@ export default function HeroDots({
     const dots = dotsRef.current;
     const SETTLED_PX = 1.25;
     const grayRgb = hexToRgb("#A1A1AA");
-    const orangeRgb = hexToRgb("#E29E5B");
+    const orangeRgb = hexToRgb("#00A452");
 
     const time = timeRef.current;
     const SWAY_FREQ = 0.35;
     const phase = phaseRef.current;
-    const isBreathing = phase === "breathe";
+    const isBreathingOrTransition = phase === "breathe" || phase === "transition";
 
     for (const dot of dots) {
-      // Skip dots that are way outside the canvas (optimization)
       if (dot.pos.x < -50 || dot.pos.x > width + 50 || 
           dot.pos.y < -50 || dot.pos.y > height + 50) {
         continue;
@@ -505,20 +515,26 @@ export default function HeroDots({
       let swayX: number;
       let swayY: number;
       
-      if (isBreathing && dot.coordinatedPhase) {
+      // Gradually introduce sway during transition
+      let swayMultiplier = 1;
+      if (phase === "snap") {
+        swayMultiplier = 0;
+      } else if (phase === "transition") {
+        swayMultiplier = easeOutQuad(transitionProgressRef.current);
+      }
+      
+      if (isBreathingOrTransition && dot.coordinatedPhase) {
         const globalPhase = time * 0.3;
-        swayX = Math.sin(globalPhase + dot.swayPhase * 0.5) * dot.swayAmp;
-        swayY = Math.cos(globalPhase + dot.swayPhase * 0.7) * dot.swayAmp;
+        swayX = Math.sin(globalPhase + dot.swayPhase * 0.5) * dot.swayAmp * swayMultiplier;
+        swayY = Math.cos(globalPhase + dot.swayPhase * 0.7) * dot.swayAmp * swayMultiplier;
       } else {
-        swayX = Math.sin(time * SWAY_FREQ + dot.swayPhase) * dot.swayAmp;
-        swayY = Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) * dot.swayAmp;
+        swayX = Math.sin(time * SWAY_FREQ + dot.swayPhase) * dot.swayAmp * swayMultiplier;
+        swayY = Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) * dot.swayAmp * swayMultiplier;
       }
 
-      // Allow dots to be drawn slightly outside canvas during convergence
       const drawX = dot.pos.x + swayX;
       const drawY = dot.pos.y + swayY;
 
-      // Only draw if within extended bounds
       if (drawX >= -dot.radius && drawX <= width + dot.radius &&
           drawY >= -dot.radius && drawY <= height + dot.radius) {
         ctx.beginPath();
