@@ -26,3 +26,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-lato), Arial, Helvetica, sans-serif;
 }
+
+/* Hide scrollbar */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}

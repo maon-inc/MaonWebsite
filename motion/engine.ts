@@ -19,10 +19,15 @@ let startTime: number | null = null;
 let accumulatedTime = 0;
 let previousScrollY = 0;
 let previousTime = 0;
+let customScrollSource: (() => number) | null = null;
+
+export function setScrollSource(getScrollY: (() => number) | null) {
+  customScrollSource = getScrollY;
+}
 
 function updateState() {
   const now = performance.now();
-  state.scrollY = window.scrollY;
+  state.scrollY = customScrollSource ? customScrollSource() : window.scrollY;
   state.viewportH = window.innerHeight;
   state.viewportW = window.innerWidth;
   

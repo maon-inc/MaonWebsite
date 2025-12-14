@@ -37,13 +37,18 @@ export default function Nav() {
           className="text-d-lato-20-bold relative group transition-opacity hover:opacity-80"
         >
           Save Your Spot
-          <span className="absolute bottom-0 right-0 w-[120px] h-[2px] bg-foreground" />
+          <span className="absolute bottom-0 right-0 w-[130px] h-[2px] bg-foreground" />
         </Link>
       </div>
 
       {/* Footer text */}
       <div className="flex flex-col items-end gap-1 mt-auto">
-        <div className="text-[20px] font-normal text-[#8C8C8C]" style={{ fontFamily: "var(--font-lato), Arial, Helvetica, sans-serif" }}>
+        <div
+          className="text-[20px] font-normal text-[#8C8C8C]"
+          style={{
+            fontFamily: "var(--font-lato), Arial, Helvetica, sans-serif",
+          }}
+        >
           MAON
         </div>
         <div className="text-d-merriweather-20-regular text-[#8C8C8C] text-right w-[250px]">
@@ -53,4 +58,3 @@ export default function Nav() {
     </nav>
   );
 }
-
