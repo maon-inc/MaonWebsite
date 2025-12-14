@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import {
   parseSvgPaths,
   samplePointsFromPaths,
+  samplePointsInFillFromPaths,
   fitPointsToRect,
   type Point,
 } from "@/lib/motion/svgSample";
@@ -34,6 +35,8 @@ interface Dot {
   baseNoiseAmp: number;
   stiffnessMult: number;
   noiseMult: number;
+  swayPhase: number;
+  swayAmp: number;
 }
 
 function generateNoise(t: number, seedA: number, seedB: number): { x: number; y: number } {
@@ -63,10 +66,10 @@ function generateFallbackPoints(count: number, width: number, height: number): P
 
 export default function HeroDots({
   svgUrl = "/assets/hero_svg.svg",
-  count = 1500,
+  count = 1200,
   dotRadius = 1.8,
   spread = 0.9,
-  durationMs = 2500,
+  durationMs = 3000,
   className,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,15 +81,9 @@ export default function HeroDots({
   const startTsRef = useRef<number | null>(null);
   const phaseRef = useRef<"snap" | "breathe">("snap");
   const snapProgressRef = useRef<number>(0);
+  const timeRef = useRef<number>(0);
   const prefersReducedMotionRef = useRef(false);
-  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
-  const isHoveringRef = useRef(false);
-
-  const HOVER_RADIUS = 160;
-  const REPULSION_STRENGTH = 1000;
-  const STIFFNESS_REDUCTION = 0.3;
-  const NOISE_INCREASE = 2.5;
-  const RECOVERY_RATE = 0.15;
+  const resizeRafRef = useRef<number | null>(null);
 
   const setupCanvas = () => {
     const canvas = canvasRef.current;
@@ -117,10 +114,6 @@ export default function HeroDots({
   };
 
   const initializeDots = (targetPoints: Point[], width: number, height: number) => {
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const maxSpread = Math.min(width, height) * spread * 0.5;
-
     const dots: Dot[] = [];
     for (let i = 0; i < count; i++) {
       const seed = i * 7919 + 12345;
@@ -132,16 +125,22 @@ export default function HeroDots({
       const r6 = seededRandom(seed + 5);
       const r7 = seededRandom(seed + 6);
       const r8 = seededRandom(seed + 7);
+      const r9 = seededRandom(seed + 9);
 
-      const radiusVariation = 0.8 + r3 * 0.4;
+      const radiusVariation = 0.6 + r3 * 0.8; // 0.6-1.4 (larger variation)
+      const swayPhase = r8 * Math.PI * 2;
+      const swayAmp = 1.2 + r9 * 1.4; // 0.8-2.2px (stronger sway)
       const target = targetPoints[i % targetPoints.length];
-      const angle = r1 * Math.PI * 2;
-      const distance = r2 * maxSpread;
-      const pos = {
-        x: centerX + Math.cos(angle) * distance,
-        y: centerY + Math.sin(angle) * distance,
-      };
       const home = { x: target.x, y: target.y };
+      
+      // Start dots near their target positions with small random offset
+      const offsetDistance = Math.min(width, height) * 0.15; // Small offset from target
+      const angle = r1 * Math.PI * 2;
+      const distance = r2 * offsetDistance;
+      const pos = {
+        x: target.x + Math.cos(angle) * distance,
+        y: target.y + Math.sin(angle) * distance,
+      };
 
       const profileType = i % 10;
       let baseStiffness: number;
@@ -151,19 +150,19 @@ export default function HeroDots({
 
       if (profileType < 7) {
         // 70% stable dots: higher stiffness, lower noise
-        baseStiffness = 2.5 + r4 * 3.0;
+        baseStiffness = 8.0 + r4 * 6.0; // Increased for faster convergence
         baseDamping = 0.90 + r5 * 0.04;
         baseNoiseAmp = 0.4 + r6 * 0.8;
         noiseFreq = 0.4 + r7 * 0.2;
       } else if (profileType < 9) {
         // 20% jitter dots: medium stiffness, medium noise
-        baseStiffness = 1.6 + r4 * 2.2;
+        baseStiffness = 5.0 + r4 * 4.0; // Increased for faster convergence
         baseDamping = 0.88 + r5 * 0.06;
         baseNoiseAmp = 1.0 + r6 * 1.4;
         noiseFreq = 0.6 + r7 * 0.3;
       } else {
         // 10% floaters: low stiffness, higher noise, slightly lower damping
-        baseStiffness = 0.8 + r4 * 1.4;
+        baseStiffness = 3.0 + r4 * 3.0; // Increased for faster convergence
         baseDamping = 0.82 + r5 * 0.06;
         baseNoiseAmp = 1.5 + r6 * 1.7;
         noiseFreq = 0.5 + r7 * 0.4;
@@ -185,33 +184,79 @@ export default function HeroDots({
         baseNoiseAmp,
         stiffnessMult: 1,
         noiseMult: 1,
+        swayPhase,
+        swayAmp,
       });
     }
 
     dotsRef.current = dots;
   };
 
-  const loadAndSampleSvg = async (width: number, height: number) => {
+  const loadTargetsOnly = async (width: number, height: number): Promise<Point[]> => {
+    let cleanup: (() => void) | null = null;
     try {
       const response = await fetch(svgUrl);
       if (!response.ok) throw new Error("Failed to fetch SVG");
       const svgText = await response.text();
 
-      const { paths, viewBox } = parseSvgPaths(svgText);
+      const { paths, viewBox, svg, cleanup: cleanupFn } = parseSvgPaths(svgText);
+      cleanup = cleanupFn;
       if (paths.length === 0) throw new Error("No paths found in SVG");
 
-      const sampledPoints = samplePointsFromPaths(paths, count);
-      if (sampledPoints.length === 0) throw new Error("Failed to sample points");
+      // Split dots: 85% outline, 15% interior
+      const outlineCount = Math.floor(count * 0.85);
+      const interiorCount = count - outlineCount;
+
+      // Sample outline points
+      const outlinePoints = samplePointsFromPaths(paths, outlineCount);
+      if (outlinePoints.length === 0) throw new Error("Failed to sample outline points");
+
+      // Sample interior points (with fallback to outline if it fails)
+      let interiorPoints: Point[] = [];
+      try {
+        interiorPoints = await samplePointsInFillFromPaths(paths, viewBox, interiorCount, svg);
+        // If we didn't get enough interior points, fill the rest with outline
+        if (interiorPoints.length < interiorCount) {
+          const additionalOutline = samplePointsFromPaths(
+            paths,
+            interiorCount - interiorPoints.length
+          );
+          interiorPoints = interiorPoints.concat(additionalOutline);
+        }
+      } catch (error) {
+        // Fallback to outline-only if interior sampling fails
+        console.warn("Interior sampling failed, using outline only:", error);
+        const additionalOutline = samplePointsFromPaths(paths, interiorCount);
+        interiorPoints = additionalOutline;
+      }
+
+      // Merge outline and interior points
+      const sampledPoints = outlinePoints.concat(interiorPoints);
 
       const targetPoints = fitPointsToRect(sampledPoints, viewBox, width, height, 0);
-      targetPointsRef.current = targetPoints;
-      initializeDots(targetPoints, width, height);
+      return targetPoints;
     } catch (error) {
       console.warn("Failed to load SVG, using fallback:", error);
       const fallbackPoints = generateFallbackPoints(count, width, height);
-      targetPointsRef.current = fallbackPoints;
-      initializeDots(fallbackPoints, width, height);
+      return fallbackPoints;
+    } finally {
+      if (cleanup) {
+        cleanup();
+      }
     }
+  };
+
+  const retargetDots = (targetPoints: Point[]) => {
+    const dots = dotsRef.current;
+    for (let i = 0; i < dots.length; i++) {
+      const target = targetPoints[i % targetPoints.length];
+      dots[i].home.x = target.x;
+      dots[i].home.y = target.y;
+      // Zero velocity to prevent "fling" after resize
+      dots[i].vel.x = 0;
+      dots[i].vel.y = 0;
+    }
+    targetPointsRef.current = targetPoints;
   };
 
   const easeOut = (t: number): number => {
@@ -224,8 +269,6 @@ export default function HeroDots({
 
   const updatePhysics = (dt: number, time: number, timestamp: number) => {
     const dots = dotsRef.current;
-    const mousePos = mousePosRef.current;
-    const isHovering = isHoveringRef.current;
     const startTs = startTsRef.current;
     const phase = phaseRef.current;
 
@@ -274,41 +317,9 @@ export default function HeroDots({
         dot.pos.y += dy * pullStrength;
       }
 
-      // Hover interaction (breathe phase only, or during snap if hovering)
-      if (mousePos && isHovering) {
-        const mx = mousePos.x;
-        const my = mousePos.y;
-        const distX = dot.pos.x - mx;
-        const distY = dot.pos.y - my;
-        const distSq = distX * distX + distY * distY;
-        const dist = Math.sqrt(distSq);
-
-        if (dist < HOVER_RADIUS && dist > 0) {
-          const t = dist / HOVER_RADIUS;
-          const falloff = (1 - t) * (1 - t);
-          const repulsion = REPULSION_STRENGTH * falloff;
-
-          const invDist = 1 / dist;
-          fx += (distX * invDist) * repulsion;
-          fy += (distY * invDist) * repulsion;
-
-          const influence = 1 - t;
-          dot.stiffnessMult = Math.max(
-            dot.stiffnessMult - RECOVERY_RATE * dt * 60,
-            1 - STIFFNESS_REDUCTION * influence
-          );
-          dot.noiseMult = Math.min(
-            dot.noiseMult + RECOVERY_RATE * dt * 60,
-            1 + NOISE_INCREASE * influence
-          );
-        } else {
-          dot.stiffnessMult = Math.min(dot.stiffnessMult + RECOVERY_RATE * dt * 60, 1);
-          dot.noiseMult = Math.max(dot.noiseMult - RECOVERY_RATE * dt * 60, 1);
-        }
-      } else {
-        dot.stiffnessMult = Math.min(dot.stiffnessMult + RECOVERY_RATE * dt * 60, 1);
-        dot.noiseMult = Math.max(dot.noiseMult - RECOVERY_RATE * dt * 60, 1);
-      }
+      // Reset multipliers to base values
+      dot.stiffnessMult = 1;
+      dot.noiseMult = 1;
 
       // Semi-implicit Euler with damping as multiplier
       dot.vel.x = (dot.vel.x + fx * dt) * damping;
@@ -358,8 +369,11 @@ export default function HeroDots({
     const grayRgb = hexToRgb("#A1A1AA");
     const orangeRgb = hexToRgb("#E29E5B");
 
+    const time = timeRef.current;
+    const SWAY_FREQ = 0.4; // Sway frequency (slightly faster for more visible motion)
+
     for (const dot of dots) {
-      // Calculate distance to home
+      // Calculate distance to home (using actual pos, not swayed)
       const dx = dot.pos.x - dot.home.x;
       const dy = dot.pos.y - dot.home.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -373,8 +387,16 @@ export default function HeroDots({
       const b = lerp(grayRgb.b, orangeRgb.b, easedT);
       ctx.fillStyle = rgbToHex(r, g, b);
 
+      // Calculate sway offset
+      const swayX = Math.sin(time * SWAY_FREQ + dot.swayPhase) * dot.swayAmp;
+      const swayY = Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) * dot.swayAmp;
+
+      // Clamp drawing position to canvas bounds (accounting for dot radius)
+      const drawX = Math.max(dot.radius, Math.min(width - dot.radius, dot.pos.x + swayX));
+      const drawY = Math.max(dot.radius, Math.min(height - dot.radius, dot.pos.y + swayY));
+
       ctx.beginPath();
-      ctx.arc(dot.pos.x, dot.pos.y, dot.radius, 0, Math.PI * 2);
+      ctx.arc(drawX, drawY, dot.radius, 0, Math.PI * 2);
       ctx.fill();
     }
   };
@@ -418,6 +440,7 @@ export default function HeroDots({
     lastTimeRef.current = timestamp;
 
     const time = timestamp / 1000;
+    timeRef.current = time;
 
     updatePhysics(dt, time, timestamp);
     draw();
@@ -434,24 +457,11 @@ export default function HeroDots({
     const size = setupCanvas();
     if (!size) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      mousePosRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-      isHoveringRef.current = true;
-    };
+    // Initial mount: load targets and initialize dots
+    loadTargetsOnly(size.width, size.height).then((targetPoints) => {
+      targetPointsRef.current = targetPoints;
+      initializeDots(targetPoints, size.width, size.height);
 
-    const handleMouseLeave = () => {
-      isHoveringRef.current = false;
-      mousePosRef.current = null;
-    };
-
-    container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("mouseleave", handleMouseLeave);
-
-    loadAndSampleSvg(size.width, size.height).then(() => {
       if (prefersReducedMotionRef.current) {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -476,27 +486,48 @@ export default function HeroDots({
       }
     });
 
+    // Resize handler with debouncing
     const stopResize = observeResize(container, () => {
-      const newSize = setupCanvas();
-      if (newSize) {
-        loadAndSampleSvg(newSize.width, newSize.height).then(() => {
-          if (!prefersReducedMotionRef.current) {
-            startTsRef.current = null;
-            phaseRef.current = "snap";
-            lastTimeRef.current = null;
-            if (rafIdRef.current) {
-              cancelAnimationFrame(rafIdRef.current);
-            }
-            rafIdRef.current = requestAnimationFrame(animate);
-          }
-        });
+      // Cancel pending resize
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
       }
+
+      // Debounce resize using requestAnimationFrame
+      resizeRafRef.current = requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+
+        const newSize = setupCanvas();
+        if (!newSize) return;
+
+        // Check if count changed - if so, reinitialize
+        if (dotsRef.current.length !== count) {
+          loadTargetsOnly(newSize.width, newSize.height).then((targetPoints) => {
+            targetPointsRef.current = targetPoints;
+            initializeDots(targetPoints, newSize.width, newSize.height);
+            if (!prefersReducedMotionRef.current && rafIdRef.current === null) {
+              startTsRef.current = null;
+              phaseRef.current = "snap";
+              lastTimeRef.current = null;
+              rafIdRef.current = requestAnimationFrame(animate);
+            }
+          });
+          return;
+        }
+
+        // Normal resize: retarget existing dots
+        loadTargetsOnly(newSize.width, newSize.height).then((targetPoints) => {
+          retargetDots(targetPoints);
+          // Do NOT restart RAF if already running
+        });
+      });
     });
 
     return () => {
-      container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("mouseleave", handleMouseLeave);
       stopResize();
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
       }

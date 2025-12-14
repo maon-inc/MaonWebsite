@@ -9,49 +9,78 @@
 :root {
   --font-serif: var(--font-merriweather);
   --font-sans: var(--font-lato);
+
+  /* Default tracking (Figma often uses 0, but make it explicit) */
+  --tracking-normal: 0em;
 }
 
-/* Desktop text styles */
+/* Global type rendering helpers (optional but helps match Figma) */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
 .text-d-merriweather-48-bold {
   font-family: var(--font-serif);
   font-size: 48px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 55.2px; /* 48 * 1.15 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-d-merriweather-45-regular {
   font-family: var(--font-serif);
   font-size: 45px;
   font-weight: 400;
-  line-height: 1.15;
+  line-height: 51.75px; /* 45 * 1.15 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-d-merriweather-24-regular {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 32.4px; /* 24 * 1.35 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-d-merriweather-20-regular {
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 28px; /* 20 * 1.4 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
-.text-d-lato-24-semibold {
+.text-d-lato-20-regular {
   font-family: var(--font-sans);
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 20px;
+  font-weight: 400; /* "semibold" label, but you set 700, keep consistent */
+  line-height: 31.2px; /* 24 * 1.3 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+.text-d-lato-20-bold {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 700; /* "semibold" label, but you set 700, keep consistent */
+  line-height: 31.2px; /* 24 * 1.3 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-d-lato-48-semibold {
   font-family: var(--font-sans);
   font-size: 48px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 55.2px; /* 48 * 1.15 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 /* Mobile text styles */
@@ -59,27 +88,34 @@
   font-family: var(--font-sans);
   font-size: 26px;
   font-weight: 400;
-  line-height: 1.25;
+  line-height: 32.5px; /* 26 * 1.25 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-m-lato-16-regular {
   font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 24px; /* 16 * 1.5 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-m-merriweather-30-regular {
   font-family: var(--font-serif);
   font-size: 30px;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 36px; /* 30 * 1.2 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
 
 .text-m-merriweather-20-regular {
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 27px; /* 20 * 1.35 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
 }
-
