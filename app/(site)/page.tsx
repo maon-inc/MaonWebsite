@@ -52,11 +52,11 @@ export default function HomePage() {
               <HeroText />
             </DotsScene>
 
-            <section className="relative h-[400vh]">
-              {/* Scroll measurement regions - absolute so they don't affect layout */}
+            <section className="relative h-[250vh]">
+              {/* Scroll measurement regions based on scrollable range (250vh - 100vh viewport = 150vh) */}
               <div className="absolute inset-0">
-                <DotsScene scatter className="h-[267vh]" />
-                <DotsScene dissipate className="h-[133vh]" />
+                <DotsScene scatter className="h-[100vh]" />
+                <DotsScene dissipate className="h-[50vh]" />
               </div>
 
               {/* Visible sticky content */}
