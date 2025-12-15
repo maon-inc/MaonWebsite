@@ -69,7 +69,7 @@ export default function Problem() {
       ref={containerRef}
       className="flex items-center justify-center px-6 md:px-0 md:w-[600px] lg:w-[1000px] h-full"
     >
-      <div className="text-center md:text-left">
+      <div className="text-left">
         <p
           className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6"
           style={{ color: `rgba(23, 23, 23, ${fadeOutOpacity})` }}
