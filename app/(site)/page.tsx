@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import HeroText from "@/components/sections/home/HeroText";
 import Nav from "@/components/site/Nav";
 import Problem from "@/components/sections/home/Problem";
@@ -10,6 +10,17 @@ import { setScrollContainer } from "@/motion/engine";
 
 export default function HomePage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -24,12 +35,14 @@ export default function HomePage() {
     };
   }, []);
 
+  const targetSize = isMobile ? 320 : 500;
+
   return (
     <DotsCanvas
       count={1200}
       dotRadius={1.8}
-      targetWidth={500}
-      targetHeight={500}
+      targetWidth={targetSize}
+      targetHeight={targetSize}
       targetAnchor="center"
       initialDurationMs={1500}
       transitionDurationMs={500}
@@ -66,11 +79,16 @@ export default function HomePage() {
             </section>
           </div>
 
-          {/* Right column: Fixed Nav (doesn't scroll) */}
-          <div className="flex-shrink-0 flex items-end justify-end pr-12 pb-16 pointer-events-none">
+          {/* Right column: Fixed Nav (doesn't scroll) - hidden on mobile */}
+          <div className="hidden md:flex flex-shrink-0 items-end justify-end pr-12 pb-16 pointer-events-none">
             <div className="pointer-events-auto">
               <Nav />
             </div>
+          </div>
+
+          {/* Mobile Nav (renders its own fixed header) */}
+          <div className="md:hidden">
+            <Nav />
           </div>
         </div>
       </main>

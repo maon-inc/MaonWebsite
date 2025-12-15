@@ -67,18 +67,18 @@ export default function Problem() {
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center md:w-[600px] lg:w-[1000px] h-full"
+      className="flex items-center justify-center px-6 md:px-0 md:w-[600px] lg:w-[1000px] h-full"
     >
-      <div className="text-left">
+      <div className="text-center md:text-left">
         <p
-          className="text-d-merriweather-45-regular mb-6"
+          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6"
           style={{ color: `rgba(23, 23, 23, ${fadeOutOpacity})` }}
         >
           10 minutes. That is how often your nervous system is interrupted. And
           because of that, stress accumulates and balance slips away.
         </p>
         <p
-          className="text-d-merriweather-45-regular"
+          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular"
           style={{ color: `rgba(23, 23, 23, ${fadeInOpacity})` }}
         >
           It is time to restore balance.

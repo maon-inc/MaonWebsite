@@ -47,6 +47,14 @@ html {
   letter-spacing: var(--tracking-normal);
   font-optical-sizing: auto;
 }
+.text-d-merriweather-24-bold {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32.4px; /* 24 * 1.35 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
 
 .text-d-merriweather-20-regular {
   font-family: var(--font-serif);
