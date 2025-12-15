@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { subscribe } from "@/motion/engine";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function HeroText() {
   const [isVisible, setIsVisible] = useState(false);
@@ -45,9 +47,22 @@ export default function HeroText() {
         <h1 className="text-d-merriweather-24-bold mb-3 text-[#171717]">
           AI ring to superpower your nervous system.
         </h1>
-        <p className="text-d-lato-20-regular text-[#171717]">
+        <p className="text-d-lato-20-regular text-[#171717] mb-6">
           Built to make you balanced without the effort.
         </p>
+        <Link
+          href="/preorder"
+          className="inline-flex items-center justify-center gap-2 w-[208px] text-d-lato-20-regular text-[#171717] border border-[#171717] rounded-[9.03px] py-3 transition-opacity hover:opacity-70"
+          style={{ borderWidth: "0.9px" }}
+        >
+          Join the waitlist
+          <Image
+            src="/assets/ui/solar_arrow-up-broken.svg"
+            alt=""
+            width={25}
+            height={25}
+          />
+        </Link>
       </div>
     </>
   );
