@@ -7,6 +7,7 @@ import { observeResize } from "@/motion/observe";
 
 export default function Problem() {
   const [progress, setProgress] = useState(0);
+  const lastProgressRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
@@ -38,6 +39,7 @@ export default function Problem() {
       const scrollRange = scrollEnd - scrollStart;
 
       if (scrollRange <= 0) {
+        lastProgressRef.current = 0;
         setProgress(0);
         return;
       }
@@ -45,7 +47,15 @@ export default function Problem() {
       const rawProgress = (state.scrollY - scrollStart) / scrollRange;
       const clampedProgress = Math.max(0, Math.min(1, rawProgress));
 
-      setProgress(clampedProgress);
+      const last = lastProgressRef.current;
+      if (
+        clampedProgress === 0 ||
+        clampedProgress === 1 ||
+        Math.abs(clampedProgress - last) > 0.01
+      ) {
+        lastProgressRef.current = clampedProgress;
+        setProgress(clampedProgress);
+      }
     });
 
     return () => {

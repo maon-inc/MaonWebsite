@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react";
 import HeroText from "@/components/sections/home/HeroText";
 import Nav from "@/components/site/Nav";
 import Problem from "@/components/sections/home/Problem";
@@ -8,30 +8,62 @@ import DotsCanvas from "@/components/motion/DotsCanvas";
 import DotsScene from "@/components/motion/DotsScene";
 import { setScrollContainer } from "@/motion/engine";
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 export default function HomePage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+  const [dotCount, setDotCount] = useState(1200);
+  const setScrollEl = useCallback((node: HTMLDivElement | null) => {
+    scrollContainerRef.current = node;
+    setScrollContainer(node);
   }, []);
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+  useIsomorphicLayoutEffect(() => {
+    const getPrefersReducedMotion = () =>
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
-    // Set custom scroll source for motion engine
-    setScrollContainer(container);
+    const getSaveData = () =>
+      (navigator as unknown as { connection?: { saveData?: boolean } })
+        .connection?.saveData === true;
+
+    const recompute = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+
+      const isLowPower = getPrefersReducedMotion() || mobile || getSaveData();
+      setDotCount(isLowPower ? 700 : 1200);
+    };
+
+    recompute();
+
+    window.addEventListener("resize", recompute);
+
+    const mql = window.matchMedia
+      ? window.matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
+    if (mql) {
+      if (typeof mql.addEventListener === "function") {
+        mql.addEventListener("change", recompute);
+      } else {
+        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
+          recompute
+        );
+      }
+    }
 
     return () => {
-      // Reset to window scroll when unmounting
-      setScrollContainer(null);
+      window.removeEventListener("resize", recompute);
+      if (mql) {
+        if (typeof mql.removeEventListener === "function") {
+          mql.removeEventListener("change", recompute);
+        } else {
+          (
+            mql as unknown as { removeListener?: (cb: () => void) => void }
+          ).removeListener?.(recompute);
+        }
+      }
     };
   }, []);
 
@@ -39,7 +71,7 @@ export default function HomePage() {
 
   return (
     <DotsCanvas
-      count={1200}
+      count={dotCount}
       dotRadius={1.8}
       targetWidth={targetSize}
       targetHeight={targetSize}
@@ -54,7 +86,7 @@ export default function HomePage() {
         <div className="relative z-10 flex h-screen">
           {/* Left column: Scrollable content */}
           <div
-            ref={scrollContainerRef}
+            ref={setScrollEl}
             className="flex-1 overflow-y-auto hide-scrollbar"
           >
             <DotsScene
@@ -65,15 +97,13 @@ export default function HomePage() {
               <HeroText />
             </DotsScene>
 
-            <section className="relative h-[250vh]">
-              {/* Scroll measurement regions based on scrollable range (250vh - 100vh viewport = 150vh) */}
-              <div className="absolute inset-0">
+            <section className="relative grid h-[250vh]">
+              <div className="pointer-events-none col-start-1 row-start-1">
                 <DotsScene scatter className="h-[100vh]" />
                 <DotsScene dissipate className="h-[50vh]" />
               </div>
 
-              {/* Visible sticky content */}
-              <div className="sticky top-0 h-screen flex items-center justify-center">
+              <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
                 <Problem />
               </div>
             </section>

@@ -55,6 +55,7 @@ export default function DotsScene({
 }: DotsSceneProps) {
   const id = useId();
   const elementRef = useRef<HTMLElement>(null);
+  const rafIdRef = useRef<number | null>(null);
   const { registerScene, unregisterScene } = useDotsCanvas();
 
   const { mode, providerKey } = useMemo(() => {
@@ -132,19 +133,50 @@ export default function DotsScene({
       });
     };
 
+    const scheduleUpdateMeasurements = () => {
+      if (rafIdRef.current !== null) return;
+      rafIdRef.current = window.requestAnimationFrame(() => {
+        rafIdRef.current = null;
+        updateMeasurements();
+      });
+    };
+
     // Initial measurement
     updateMeasurements();
 
-    // Re-measure on resize
-    const stopResize = observeResize(element as HTMLElement, updateMeasurements);
+    // Delayed re-measures to handle late layout shifts (fonts, async content)
+    const timeout250 = window.setTimeout(scheduleUpdateMeasurements, 250);
+    const timeout1200 = window.setTimeout(scheduleUpdateMeasurements, 1200);
 
-    // Re-measure on window resize
-    const handleResize = () => updateMeasurements();
-    window.addEventListener("resize", handleResize);
+    // Re-measure on resize
+    const stopElementResize = observeResize(element as HTMLElement, () => {
+      scheduleUpdateMeasurements();
+    });
+
+    const scrollContainer = getScrollContainer();
+    const stopScrollContainerResize = scrollContainer
+      ? observeResize(scrollContainer, () => {
+          scheduleUpdateMeasurements();
+        })
+      : null;
+
+    const stopRootResize = observeResize(document.documentElement, () => {
+      scheduleUpdateMeasurements();
+    });
+
+    // If the scroll container isn't set yet, the document root observer serves
+    // as a fallback for viewport/layout changes.
 
     return () => {
-      stopResize();
-      window.removeEventListener("resize", handleResize);
+      window.clearTimeout(timeout250);
+      window.clearTimeout(timeout1200);
+      if (rafIdRef.current !== null) {
+        window.cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      stopElementResize();
+      stopScrollContainerResize?.();
+      stopRootResize();
       unregisterScene(id);
     };
   }, [id, provider, providerKey, registerScene, scrollStartOffset, svgUrl, unregisterScene]);

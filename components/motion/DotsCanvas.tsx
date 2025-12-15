@@ -245,6 +245,9 @@ export default function DotsCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dotsRef = useRef<Dot[]>([]);
+  const resizeRafRef = useRef<number | null>(null);
+  const needsReinitRef = useRef(true);
+  const lastCountRef = useRef<number>(count);
   const scenesRef = useRef<Map<string, SceneConfig>>(new Map());
   const sceneTargetsRef = useRef<Map<string, Point[]>>(new Map());
   const targetsCacheRef = useRef<Map<string, { key: string; targets: Point[] }>>(
@@ -296,13 +299,13 @@ export default function DotsCanvas({
 
     const dpr = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
+    const width = Math.floor(rect.width);
+    const height = Math.floor(rect.height);
 
     if (width === 0 || height === 0) return undefined;
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
@@ -1057,11 +1060,21 @@ export default function DotsCanvas({
     const size = setupCanvas();
     if (!size) return;
 
-    const stopResize = observeResize(container, () => {
-      setupCanvas();
-    });
+    const scheduleResize = () => {
+      if (resizeRafRef.current !== null) return;
+      resizeRafRef.current = window.requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        setupCanvas();
+      });
+    };
+
+    const stopResize = observeResize(container, scheduleResize);
 
     return () => {
+      if (resizeRafRef.current !== null) {
+        window.cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
       stopResize();
     };
   }, [setupCanvas]);
@@ -1108,6 +1121,13 @@ export default function DotsCanvas({
   useEffect(() => {
     if (!scenesLoaded || canvasSize.width === 0) return;
 
+    if (lastCountRef.current !== count) {
+      lastCountRef.current = count;
+      needsReinitRef.current = true;
+    }
+
+    if (!needsReinitRef.current) return;
+
     initializeDots(canvasSize.width, canvasSize.height);
     currentHomeRef.current = [];
     activeModeRef.current = sortedScenesRef.current[0]?.provider.mode ?? "svg";
@@ -1119,11 +1139,19 @@ export default function DotsCanvas({
     startTsRef.current = null;
     phaseRef.current = "initial";
     lastTimeRef.current = null;
+    needsReinitRef.current = false;
   }, [
     scenesLoaded,
     canvasSize,
+    count,
     initializeDots,
   ]);
+
+  useEffect(() => {
+    if (!scenesLoaded) {
+      needsReinitRef.current = true;
+    }
+  }, [scenesLoaded]);
 
   // -------------------------------------------------------------------------
   // Render
