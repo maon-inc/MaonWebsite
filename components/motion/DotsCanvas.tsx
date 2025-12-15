@@ -19,6 +19,10 @@ import {
 import { subscribe } from "@/motion/engine";
 import { clamp01, lerp } from "@/motion/math";
 import { observeResize } from "@/motion/observe";
+import {
+  hashStringToSeed,
+  makeMulberry32,
+} from "./dotsTargets";
 
 // ============================================================================
 // Types
@@ -26,9 +30,11 @@ import { observeResize } from "@/motion/observe";
 
 interface SceneConfig {
   id: string;
-  svgUrl: string;
   scrollStart: number;
   scrollEnd: number;
+  svgUrl?: string;
+  providerKey: string;
+  provider: DotTargetProvider;
 }
 
 interface DotsCanvasContextValue {
@@ -53,6 +59,15 @@ interface Dot {
   swayAmp: number;
   coordinatedPhase: boolean;
 }
+
+export type DotTargetProvider = {
+  mode: "svg" | "scatter" | "dissipate";
+  getTargets: (
+    canvasWidth: number,
+    canvasHeight: number,
+    dotCount: number
+  ) => Promise<Point[]> | Point[];
+};
 
 type TargetAnchor =
   | "center"
@@ -197,6 +212,17 @@ function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 1.8);
 }
 
+const MODE_PARAMS: Record<
+  DotTargetProvider["mode"],
+  { stiffnessMult: number; noiseMult: number; jitterMult: number }
+> = {
+  svg: { stiffnessMult: 1, noiseMult: 1, jitterMult: 0 },
+  scatter: { stiffnessMult: 0.22, noiseMult: 2.2, jitterMult: 0.35 },
+  dissipate: { stiffnessMult: 2.4, noiseMult: 0.15, jitterMult: 0 },
+};
+
+const MODE_TRANSITION_MS = 450;
+
 // ============================================================================
 // DotsCanvas Component
 // ============================================================================
@@ -220,7 +246,11 @@ export default function DotsCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dotsRef = useRef<Dot[]>([]);
   const scenesRef = useRef<Map<string, SceneConfig>>(new Map());
-  const scenePointsRef = useRef<Map<string, Point[]>>(new Map());
+  const sceneTargetsRef = useRef<Map<string, Point[]>>(new Map());
+  const targetsCacheRef = useRef<Map<string, { key: string; targets: Point[] }>>(
+    new Map()
+  );
+  const sortedScenesRef = useRef<SceneConfig[]>([]);
   const currentHomeRef = useRef<Point[]>([]);
   const lastTimeRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
@@ -230,6 +260,15 @@ export default function DotsCanvas({
   const timeRef = useRef<number>(0);
   const scrollYRef = useRef<number>(0);
   const prefersReducedMotionRef = useRef(false);
+  const activeModeRef = useRef<DotTargetProvider["mode"]>("svg");
+  const activeSceneIdRef = useRef<string | null>(null);
+  const dissipateImpulseKeyRef = useRef<string | null>(null);
+  const dissipateBurstUntilRef = useRef<number>(0);
+  const modeTransitionRef = useRef<{
+    from: DotTargetProvider["mode"];
+    to: DotTargetProvider["mode"];
+    startTimeMs: number;
+  } | null>(null);
 
   // Pre-parse colors
   const grayRgbRef = useRef(hexToRgb(colorGray));
@@ -238,6 +277,7 @@ export default function DotsCanvas({
   // State
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [scenesLoaded, setScenesLoaded] = useState(false);
+  const [scenesVersion, setScenesVersion] = useState(0);
 
   // Update colors when props change
   useEffect(() => {
@@ -283,7 +323,8 @@ export default function DotsCanvas({
     async (
       svgUrl: string,
       canvasWidth: number,
-      canvasHeight: number
+      canvasHeight: number,
+      dotCount: number
     ): Promise<Point[]> => {
       const { offsetX, offsetY } = calculateTargetOffset(
         canvasWidth,
@@ -310,8 +351,8 @@ export default function DotsCanvas({
 
         if (paths.length === 0) throw new Error("No paths found in SVG");
 
-        const outlineCount = Math.floor(count * 0.85);
-        const interiorCount = count - outlineCount;
+        const outlineCount = Math.floor(dotCount * 0.85);
+        const interiorCount = dotCount - outlineCount;
 
         const outlinePoints = samplePointsFromPaths(paths, outlineCount);
         if (outlinePoints.length === 0)
@@ -353,7 +394,7 @@ export default function DotsCanvas({
       } catch (error) {
         console.warn(`Failed to load SVG ${svgUrl}, using fallback:`, error);
         const fallbackPoints = generateFallbackPoints(
-          count,
+          dotCount,
           targetWidth,
           targetHeight
         );
@@ -365,7 +406,7 @@ export default function DotsCanvas({
         if (cleanup) cleanup();
       }
     },
-    [count, targetWidth, targetHeight, targetAnchor]
+    [targetWidth, targetHeight, targetAnchor]
   );
 
   // -------------------------------------------------------------------------
@@ -373,36 +414,72 @@ export default function DotsCanvas({
   // -------------------------------------------------------------------------
 
   const registerScene = useCallback((config: SceneConfig) => {
+    const prev = scenesRef.current.get(config.id);
     scenesRef.current.set(config.id, config);
+
+    sortedScenesRef.current = Array.from(scenesRef.current.values()).sort(
+      (a, b) => a.scrollStart - b.scrollStart
+    );
+
+    if (prev && prev.providerKey !== config.providerKey) {
+      sceneTargetsRef.current.delete(config.id);
+      targetsCacheRef.current.delete(config.id);
+      setScenesLoaded(false);
+    }
+
+    setScenesVersion((v) => v + 1);
   }, []);
 
   const unregisterScene = useCallback((id: string) => {
     scenesRef.current.delete(id);
-    scenePointsRef.current.delete(id);
+    sceneTargetsRef.current.delete(id);
+    targetsCacheRef.current.delete(id);
+    sortedScenesRef.current = Array.from(scenesRef.current.values()).sort(
+      (a, b) => a.scrollStart - b.scrollStart
+    );
+    setScenesVersion((v) => v + 1);
   }, []);
 
   // -------------------------------------------------------------------------
-  // Load All Scene Points
+  // Load All Scene Targets
   // -------------------------------------------------------------------------
 
-  const loadAllScenePoints = useCallback(async () => {
-    const scenes = Array.from(scenesRef.current.values());
+  const loadAllSceneTargets = useCallback(async () => {
+    const scenes = sortedScenesRef.current;
     if (scenes.length === 0 || canvasSize.width === 0) return;
 
+    const w = canvasSize.width;
+    const h = canvasSize.height;
+    const dotCount = count;
+    const globalKey = `${w}x${h}|dots:${dotCount}|tw:${targetWidth}|th:${targetHeight}|ta:${targetAnchor}`;
+
     const loadPromises = scenes.map(async (scene) => {
-      if (!scenePointsRef.current.has(scene.id)) {
-        const points = await loadSvgPoints(
-          scene.svgUrl,
-          canvasSize.width,
-          canvasSize.height
-        );
-        scenePointsRef.current.set(scene.id, points);
+      const cacheKey = `${scene.providerKey}|${globalKey}`;
+      const cached = targetsCacheRef.current.get(scene.id);
+      if (cached?.key === cacheKey) {
+        sceneTargetsRef.current.set(scene.id, cached.targets);
+        return;
       }
+
+      let targets: Point[];
+
+      if (scene.provider.mode === "svg") {
+        if (!scene.svgUrl) {
+          throw new Error(`DotsCanvas: svg scene "${scene.id}" missing svgUrl`);
+        }
+        targets = await loadSvgPoints(scene.svgUrl, w, h, dotCount);
+      } else {
+        const maybe = scene.provider.getTargets(w, h, dotCount);
+        targets = maybe instanceof Promise ? await maybe : maybe;
+      }
+
+      targetsCacheRef.current.set(scene.id, { key: cacheKey, targets });
+      sceneTargetsRef.current.set(scene.id, targets);
     });
 
     await Promise.all(loadPromises);
     setScenesLoaded(true);
-  }, [canvasSize, loadSvgPoints]);
+  }, [canvasSize, count, loadSvgPoints, targetAnchor, targetHeight, targetWidth]);
 
   // -------------------------------------------------------------------------
   // Initialize Dots
@@ -479,94 +556,191 @@ export default function DotsCanvas({
   );
 
   // -------------------------------------------------------------------------
-  // Get Current Target Points Based on Scroll
+  // Targets Based on Scroll (allocation-free)
   // -------------------------------------------------------------------------
 
-  const getCurrentTargetPoints = useCallback(
-    (scrollY: number): Point[] | null => {
-      const scenes = Array.from(scenesRef.current.values()).sort(
-        (a, b) => a.scrollStart - b.scrollStart
-      );
+  const BLEND_PX = 140;
 
-      if (scenes.length === 0) return null;
+  const getTargetBlend = useCallback((scrollY: number) => {
+    const scenes = sortedScenesRef.current;
+    if (scenes.length === 0) return null;
 
-      for (let i = 0; i < scenes.length; i++) {
-        const scene = scenes[i];
-        const nextScene = scenes[i + 1];
+    const first = scenes[0];
+    if (scrollY < first.scrollStart) {
+      const from = sceneTargetsRef.current.get(first.id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: first.provider.mode,
+        activeSceneId: first.id,
+      };
+    }
 
-        if (scrollY < scene.scrollStart && i === 0) {
-          return scenePointsRef.current.get(scene.id) || null;
-        }
+    for (let i = 0; i < scenes.length; i++) {
+      const scene = scenes[i];
+      const next = scenes[i + 1];
 
-        if (scrollY >= scene.scrollStart && scrollY <= scene.scrollEnd) {
-          const scenePoints = scenePointsRef.current.get(scene.id);
-          if (!scenePoints) return null;
+      if (scrollY >= scene.scrollStart && scrollY <= scene.scrollEnd) {
+        const from = sceneTargetsRef.current.get(scene.id);
+        if (!from) return null;
 
-          if (nextScene) {
-            const nextPoints = scenePointsRef.current.get(nextScene.id);
-            if (nextPoints && scrollY > scene.scrollEnd - 100) {
-              const blendStart = scene.scrollEnd - 100;
-              const blendProgress = clamp01(
-                (scrollY - blendStart) / (scene.scrollEnd - blendStart)
-              );
-              return scenePoints.map((p, idx) => ({
-                x: lerp(p.x, nextPoints[idx]?.x ?? p.x, blendProgress),
-                y: lerp(p.y, nextPoints[idx]?.y ?? p.y, blendProgress),
-              }));
-            }
-          }
-
-          return scenePoints;
-        }
-
-        if (
-          nextScene &&
-          scrollY > scene.scrollEnd &&
-          scrollY < nextScene.scrollStart
-        ) {
-          const scenePoints = scenePointsRef.current.get(scene.id);
-          const nextPoints = scenePointsRef.current.get(nextScene.id);
-
-          if (scenePoints && nextPoints) {
-            const gapProgress = clamp01(
-              (scrollY - scene.scrollEnd) /
-                (nextScene.scrollStart - scene.scrollEnd)
-            );
-            return scenePoints.map((p, idx) => ({
-              x: lerp(p.x, nextPoints[idx]?.x ?? p.x, gapProgress),
-              y: lerp(p.y, nextPoints[idx]?.y ?? p.y, gapProgress),
-            }));
+        if (next) {
+          const to = sceneTargetsRef.current.get(next.id);
+          if (to && scrollY > scene.scrollEnd - BLEND_PX) {
+            const t = clamp01((scrollY - (scene.scrollEnd - BLEND_PX)) / BLEND_PX);
+            const activeSceneId = t > 0.5 ? next.id : scene.id;
+            const mode = t > 0.5 ? next.provider.mode : scene.provider.mode;
+            return { from, to, t, mode, activeSceneId };
           }
         }
+
+        return {
+          from,
+          to: null as Point[] | null,
+          t: 0,
+          mode: scene.provider.mode,
+          activeSceneId: scene.id,
+        };
       }
 
-      const lastScene = scenes[scenes.length - 1];
-      return scenePointsRef.current.get(lastScene.id) || null;
+      if (next && scrollY > scene.scrollEnd && scrollY < next.scrollStart) {
+        const from = sceneTargetsRef.current.get(scene.id);
+        const to = sceneTargetsRef.current.get(next.id);
+        if (!from || !to) return null;
+
+        const t = clamp01(
+          (scrollY - scene.scrollEnd) / (next.scrollStart - scene.scrollEnd)
+        );
+        const activeSceneId = t > 0.5 ? next.id : scene.id;
+        const mode = t > 0.5 ? next.provider.mode : scene.provider.mode;
+        return { from, to, t, mode, activeSceneId };
+      }
+    }
+
+    const last = scenes[scenes.length - 1];
+    const from = sceneTargetsRef.current.get(last.id);
+    if (!from) return null;
+    return {
+      from,
+      to: null as Point[] | null,
+      t: 0,
+      mode: last.provider.mode,
+      activeSceneId: last.id,
+    };
+  }, []);
+
+  const applyDissipateImpulse = useCallback(
+    (sceneId: string, timeMs: number) => {
+      const dots = dotsRef.current;
+      if (dots.length === 0) return;
+
+      const w = canvasSize.width;
+      const h = canvasSize.height;
+      if (w === 0 || h === 0) return;
+
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const strength = Math.min(w, h) * 0.9;
+
+      const rand = makeMulberry32(hashStringToSeed(sceneId));
+
+      for (let i = 0; i < dots.length; i++) {
+        const dot = dots[i];
+        let dx = dot.pos.x - centerX;
+        let dy = dot.pos.y - centerY;
+        let len = Math.hypot(dx, dy);
+        if (len < 1e-3) {
+          dx = Math.cos(i);
+          dy = Math.sin(i);
+          len = 1;
+        }
+
+        const inv = 1 / len;
+        const ux = dx * inv;
+        const uy = dy * inv;
+        const px = -uy;
+        const py = ux;
+
+        dot.vel.x += ux * strength;
+        dot.vel.y += uy * strength;
+
+        const jitter = (rand() - 0.5) * strength * 0.12;
+        dot.vel.x += px * jitter;
+        dot.vel.y += py * jitter;
+      }
+
+      dissipateImpulseKeyRef.current = sceneId;
+      dissipateBurstUntilRef.current = timeMs + 450;
     },
-    []
+    [canvasSize.height, canvasSize.width]
   );
 
-  const updateCurrentHomeTargets = useCallback(() => {
-    const targetPoints = getCurrentTargetPoints(scrollYRef.current);
-    if (!targetPoints) return;
+  const updateCurrentHomeTargets = useCallback(
+    (timeMs: number) => {
+      const blend = getTargetBlend(scrollYRef.current);
+      if (!blend) return;
 
-    if (currentHomeRef.current.length === 0) {
-      currentHomeRef.current = targetPoints.map((p) => ({ ...p }));
-      return;
-    }
-
-    for (let i = 0; i < targetPoints.length; i++) {
-      const target = targetPoints[i];
-      if (!target) continue;
-      const current = currentHomeRef.current[i];
-      if (current) {
-        current.x = lerp(current.x, target.x, morphSpeed);
-        current.y = lerp(current.y, target.y, morphSpeed);
-      } else {
-        currentHomeRef.current[i] = { ...target };
+      const prevMode = activeModeRef.current;
+      if (blend.mode !== prevMode) {
+        modeTransitionRef.current = {
+          from: prevMode,
+          to: blend.mode,
+          startTimeMs: timeMs,
+        };
+        activeModeRef.current = blend.mode;
       }
-    }
-  }, [getCurrentTargetPoints, morphSpeed]);
+
+      activeSceneIdRef.current = blend.activeSceneId;
+
+      if (
+        blend.mode === "dissipate" &&
+        dissipateImpulseKeyRef.current !== blend.activeSceneId
+      ) {
+        applyDissipateImpulse(blend.activeSceneId, timeMs);
+      }
+
+      const fromTargets = blend.from;
+      const toTargets = blend.to;
+      const blendT = blend.t;
+
+      if (currentHomeRef.current.length === 0) {
+        const homes: Point[] = new Array(count);
+        for (let i = 0; i < count; i++) {
+          const a = fromTargets[i % fromTargets.length];
+          if (toTargets) {
+            const b = toTargets[i % toTargets.length];
+            homes[i] = { x: lerp(a.x, b.x, blendT), y: lerp(a.y, b.y, blendT) };
+          } else {
+            homes[i] = { x: a.x, y: a.y };
+          }
+        }
+        currentHomeRef.current = homes;
+        return;
+      }
+
+      for (let i = 0; i < count; i++) {
+        const a = fromTargets[i % fromTargets.length];
+        let tx = a.x;
+        let ty = a.y;
+        if (toTargets) {
+          const b = toTargets[i % toTargets.length];
+          tx = lerp(a.x, b.x, blendT);
+          ty = lerp(a.y, b.y, blendT);
+        }
+
+        const current = currentHomeRef.current[i];
+        if (current) {
+          current.x = lerp(current.x, tx, morphSpeed);
+          current.y = lerp(current.y, ty, morphSpeed);
+        } else {
+          currentHomeRef.current[i] = { x: tx, y: ty };
+        }
+      }
+    },
+    [applyDissipateImpulse, count, getTargetBlend, morphSpeed]
+  );
 
   // -------------------------------------------------------------------------
   // Physics Update
@@ -613,6 +787,34 @@ export default function DotsCanvas({
 
       const easedInitialProgress = easeInOutCubic(initialProgress);
       const easedTransitionProgress = easeOutQuad(transitionProgress);
+
+      const modeNow = activeModeRef.current;
+      let stiffnessMult = 1;
+      let noiseMult = 1;
+      let jitterMult = 0;
+
+      const modeTransition = modeTransitionRef.current;
+      if (modeTransition) {
+        const t = clamp01(
+          (timestamp - modeTransition.startTimeMs) / MODE_TRANSITION_MS
+        );
+        const easedT = easeOutQuad(t);
+
+        const a = MODE_PARAMS[modeTransition.from];
+        const b = MODE_PARAMS[modeTransition.to];
+        stiffnessMult = lerp(a.stiffnessMult, b.stiffnessMult, easedT);
+        noiseMult = lerp(a.noiseMult, b.noiseMult, easedT);
+        jitterMult = lerp(a.jitterMult, b.jitterMult, easedT);
+
+        if (t >= 1) {
+          modeTransitionRef.current = null;
+        }
+      } else {
+        const p = MODE_PARAMS[modeNow];
+        stiffnessMult = p.stiffnessMult;
+        noiseMult = p.noiseMult;
+        jitterMult = p.jitterMult;
+      }
 
       for (let i = 0; i < dots.length; i++) {
         const dot = dots[i];
@@ -664,12 +866,28 @@ export default function DotsCanvas({
           const dy = home.y - dot.pos.y;
 
           // Higher stiffness for faster snapping during scroll
-          const stiffness = dot.baseStiffness * 1.2;
-          const noiseAmp = dot.baseNoiseAmp * 0.8;
-          const damping = dot.baseDamping;
+          const stiffness = dot.baseStiffness * 1.2 * stiffnessMult;
+          const noiseAmp = dot.baseNoiseAmp * 0.8 * noiseMult;
+          let damping = dot.baseDamping;
+
+          if (modeNow === "scatter") {
+            const wobble = 0.5 + 0.5 * Math.sin(time * 0.9 + dot.seedA);
+            damping = damping * (0.93 + wobble * 0.06);
+            damping = Math.min(0.985, damping);
+          } else if (modeNow === "dissipate") {
+            if (timestamp < dissipateBurstUntilRef.current) {
+              damping = Math.min(0.995, damping + 0.06);
+            }
+          }
 
           let fx = stiffness * dx;
           let fy = stiffness * dy;
+
+          if (modeNow === "scatter") {
+            const jitter = noiseAmp * jitterMult;
+            fx += Math.sin(time * 1.3 + dot.swayPhase) * jitter;
+            fy += Math.cos(time * 1.5 + dot.swayPhase * 0.7) * jitter;
+          }
 
           if (dot.coordinatedPhase) {
             const coordAmp = noiseAmp * 0.6;
@@ -853,7 +1071,7 @@ export default function DotsCanvas({
       scrollYRef.current = state.scrollY;
 
       if (prefersReducedMotionRef.current) {
-        updateCurrentHomeTargets();
+        updateCurrentHomeTargets(state.time);
         drawReducedMotion();
         return;
       }
@@ -873,7 +1091,7 @@ export default function DotsCanvas({
       const timeSeconds = state.time / 1000;
       timeRef.current = timeSeconds;
 
-      updateCurrentHomeTargets();
+      updateCurrentHomeTargets(state.time);
       updatePhysics(dt, timeSeconds, state.time);
       draw();
     });
@@ -883,19 +1101,20 @@ export default function DotsCanvas({
 
   useEffect(() => {
     if (canvasSize.width > 0 && scenesRef.current.size > 0) {
-      loadAllScenePoints();
+      loadAllSceneTargets();
     }
-  }, [canvasSize, loadAllScenePoints]);
+  }, [canvasSize, loadAllSceneTargets, scenesVersion]);
 
   useEffect(() => {
     if (!scenesLoaded || canvasSize.width === 0) return;
 
     initializeDots(canvasSize.width, canvasSize.height);
-
-    const initialPoints = getCurrentTargetPoints(scrollYRef.current);
-    if (initialPoints) {
-      currentHomeRef.current = initialPoints.map((p) => ({ ...p }));
-    }
+    currentHomeRef.current = [];
+    activeModeRef.current = sortedScenesRef.current[0]?.provider.mode ?? "svg";
+    activeSceneIdRef.current = null;
+    dissipateImpulseKeyRef.current = null;
+    dissipateBurstUntilRef.current = 0;
+    modeTransitionRef.current = null;
 
     startTsRef.current = null;
     phaseRef.current = "initial";
@@ -904,7 +1123,6 @@ export default function DotsCanvas({
     scenesLoaded,
     canvasSize,
     initializeDots,
-    getCurrentTargetPoints,
   ]);
 
   // -------------------------------------------------------------------------

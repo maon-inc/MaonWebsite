@@ -54,14 +54,14 @@ export default function Problem() {
     };
   }, []);
 
-  // First paragraph: starts fully visible, fades to gray as you scroll
-  // Fades from opacity 1 to 0.15 over progress 0 to 0.6
-  const fadeOutProgress = Math.min(1, progress / 0.6);
+  // First paragraph: fades out through the "problem" phase.
+  // Resolution begins when the dissipate scene starts (see page layout).
+  const resolutionStart = 2 / 3;
+  const fadeOutProgress = Math.min(1, progress / resolutionStart);
   const fadeOutOpacity = 1 - fadeOutProgress * 0.85;
 
-  // Second paragraph: starts gray, becomes visible as you scroll
-  // Fades from opacity 0.15 to 1 over progress 0.4 to 1
-  const fadeInProgress = Math.max(0, (progress - 0.4) / 0.6);
+  // Second paragraph: becomes active during the "resolution" phase.
+  const fadeInProgress = Math.max(0, (progress - resolutionStart) / (1 - resolutionStart));
   const fadeInOpacity = 0.15 + fadeInProgress * 0.85;
 
   return (

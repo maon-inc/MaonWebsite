@@ -52,14 +52,18 @@ export default function HomePage() {
               <HeroText />
             </DotsScene>
 
-            <DotsScene
-              svgUrl="/assets/hero_svg2.svg"
-              className="relative h-[200vh]"
-            >
+            <section className="relative h-[400vh]">
+              {/* Scroll measurement regions - absolute so they don't affect layout */}
+              <div className="absolute inset-0">
+                <DotsScene scatter className="h-[267vh]" />
+                <DotsScene dissipate className="h-[133vh]" />
+              </div>
+
+              {/* Visible sticky content */}
               <div className="sticky top-0 h-screen flex items-center justify-center">
                 <Problem />
               </div>
-            </DotsScene>
+            </section>
           </div>
 
           {/* Right column: Fixed Nav (doesn't scroll) */}

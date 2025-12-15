@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useId } from "react";
-import { useDotsCanvas } from "./DotsCanvas";
+import { useEffect, useMemo, useRef, useId } from "react";
+import { useDotsCanvas, type DotTargetProvider } from "./DotsCanvas";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
 import { getScrollContainer } from "@/motion/engine";
+import { generateDissipateTargets, generateScatterTargets } from "./dotsTargets";
 
 interface DotsSceneProps {
   /** URL to the SVG file for this scene's dot formation */
-  svgUrl: string;
+  svgUrl?: string;
+  scatter?: boolean;
+  dissipate?: boolean;
   /** 
    * Scroll offset from the element's top where morphing to this SVG begins.
    * Can be negative to start before the element enters viewport.
    * Default: 0 (starts when element top reaches viewport top)
    */
   scrollStartOffset?: number;
-  /**
-   * Scroll offset from the element's top where morphing to this SVG completes.
-   * Default: element height (completes when element bottom reaches viewport top)
-   */
-  scrollEndOffset?: number;
   /** Content to render inside this scene section */
   children?: React.ReactNode;
   /** Additional class names for the section wrapper */
@@ -48,8 +46,9 @@ interface DotsSceneProps {
  */
 export default function DotsScene({
   svgUrl,
+  scatter,
+  dissipate,
   scrollStartOffset = 0,
-  scrollEndOffset,
   children,
   className,
   as: Component = "section",
@@ -57,6 +56,58 @@ export default function DotsScene({
   const id = useId();
   const elementRef = useRef<HTMLElement>(null);
   const { registerScene, unregisterScene } = useDotsCanvas();
+
+  const { mode, providerKey } = useMemo(() => {
+    const requested: Array<DotTargetProvider["mode"]> = [];
+    if (svgUrl) requested.push("svg");
+    if (scatter) requested.push("scatter");
+    if (dissipate) requested.push("dissipate");
+
+    let resolved: DotTargetProvider["mode"] = "svg";
+    if (dissipate) resolved = "dissipate";
+    else if (scatter) resolved = "scatter";
+    else if (svgUrl) resolved = "svg";
+
+    if (requested.length > 1 && process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[DotsScene] Multiple modes specified (${requested.join(
+          ", "
+        )}); using "${resolved}".`
+      );
+    }
+
+    if (!svgUrl && !scatter && !dissipate && process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[DotsScene] No mode specified; set svgUrl, scatter, or dissipate. Defaulting to "scatter".`
+      );
+      resolved = "scatter";
+    }
+
+    const key =
+      resolved === "svg" ? `svg:${svgUrl ?? ""}` : resolved;
+
+    return { mode: resolved, providerKey: key };
+  }, [dissipate, scatter, svgUrl]);
+
+  const provider: DotTargetProvider = useMemo(() => {
+    if (mode === "scatter") {
+      return {
+        mode,
+        getTargets: (w, h, dotCount) => generateScatterTargets(id, w, h, dotCount),
+      };
+    }
+    if (mode === "dissipate") {
+      return {
+        mode,
+        getTargets: (w, h, dotCount) =>
+          generateDissipateTargets(id, w, h, dotCount),
+      };
+    }
+    return {
+      mode: "svg",
+      getTargets: () => [],
+    };
+  }, [id, mode]);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -69,15 +120,15 @@ export default function DotsScene({
       );
       
       const scrollStart = elementTop + scrollStartOffset;
-      const scrollEnd = scrollEndOffset !== undefined 
-        ? elementTop + scrollEndOffset 
-        : elementTop + elementHeight;
+      const scrollEnd = elementTop + elementHeight;
 
       registerScene({
         id,
-        svgUrl,
         scrollStart,
         scrollEnd,
+        svgUrl,
+        providerKey,
+        provider,
       });
     };
 
@@ -96,7 +147,7 @@ export default function DotsScene({
       window.removeEventListener("resize", handleResize);
       unregisterScene(id);
     };
-  }, [id, svgUrl, scrollStartOffset, scrollEndOffset, registerScene, unregisterScene]);
+  }, [id, provider, providerKey, registerScene, scrollStartOffset, svgUrl, unregisterScene]);
 
   return (
     <Component
