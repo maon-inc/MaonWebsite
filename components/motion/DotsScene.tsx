@@ -4,6 +4,7 @@ import { useEffect, useRef, useId } from "react";
 import { useDotsCanvas } from "./DotsCanvas";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
+import { getScrollContainer } from "@/motion/engine";
 
 interface DotsSceneProps {
   /** URL to the SVG file for this scene's dot formation */
@@ -62,7 +63,10 @@ export default function DotsScene({
     if (!element) return;
 
     const updateMeasurements = () => {
-      const { elementTop, elementHeight } = measureElement(element as HTMLElement);
+      const { elementTop, elementHeight } = measureElement(
+        element as HTMLElement,
+        getScrollContainer()
+      );
       
       const scrollStart = elementTop + scrollStartOffset;
       const scrollEnd = scrollEndOffset !== undefined 

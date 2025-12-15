@@ -8,11 +8,24 @@ export interface ElementMeasure {
   elementHeight: number;
 }
 
-export function measureElement(element: HTMLElement): ElementMeasure {
+export function measureElement(
+  element: HTMLElement,
+  scrollContainer?: HTMLElement | null
+): ElementMeasure {
   const rect = element.getBoundingClientRect();
+
+  if (!scrollContainer) {
+    return {
+      elementTop: rect.top + window.scrollY,
+      elementHeight: rect.height,
+    };
+  }
+
+  const rootRect = scrollContainer.getBoundingClientRect();
+  const elementTop = rect.top - rootRect.top + scrollContainer.scrollTop;
+
   return {
-    elementTop: rect.top + window.scrollY,
+    elementTop,
     elementHeight: rect.height,
   };
 }
-

@@ -6,7 +6,7 @@
 import type { MotionState, Subscriber } from "./types";
 import { computeVelocity } from "./scroll";
 
-let state: MotionState = {
+const state: MotionState = {
   scrollY: 0,
   viewportH: 0,
   viewportW: 0,
@@ -20,16 +20,36 @@ let accumulatedTime = 0;
 let previousScrollY = 0;
 let previousTime = 0;
 let customScrollSource: (() => number) | null = null;
+let scrollContainerEl: HTMLElement | null = null;
+
+function readScrollY() {
+  return customScrollSource ? customScrollSource() : window.scrollY;
+}
 
 export function setScrollSource(getScrollY: (() => number) | null) {
   customScrollSource = getScrollY;
 }
 
+export function setScrollContainer(el: HTMLElement | null) {
+  scrollContainerEl = el;
+  setScrollSource(el ? () => el.scrollTop : null);
+}
+
+export function getScrollContainer(): HTMLElement | null {
+  return scrollContainerEl;
+}
+
 function updateState() {
   const now = performance.now();
-  state.scrollY = customScrollSource ? customScrollSource() : window.scrollY;
-  state.viewportH = window.innerHeight;
-  state.viewportW = window.innerWidth;
+  state.scrollY = readScrollY();
+
+  if (scrollContainerEl) {
+    state.viewportH = scrollContainerEl.clientHeight;
+    state.viewportW = scrollContainerEl.clientWidth;
+  } else {
+    state.viewportH = window.innerHeight;
+    state.viewportW = window.innerWidth;
+  }
   
   if (startTime !== null) {
     const currentTime = accumulatedTime + (now - startTime);
@@ -53,7 +73,7 @@ function tick() {
 function start() {
   if (rafId !== null) return;
   startTime = performance.now();
-  previousScrollY = window.scrollY;
+  previousScrollY = readScrollY();
   previousTime = accumulatedTime;
   updateState();
   rafId = requestAnimationFrame(tick);
@@ -84,4 +104,3 @@ export function subscribe(subscriber: Subscriber): () => void {
 }
 
 export { start, stop };
-

@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { subscribe } from "@/motion/engine";
+import { getScrollContainer, subscribe } from "@/motion/engine";
 import { clamp01 } from "@/motion/math";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
@@ -58,7 +58,7 @@ export default function SceneNoState({
     let frame = 0;
 
     const recompute = () => {
-      const m = measureElement(el);
+      const m = measureElement(el, getScrollContainer());
       top = m.elementTop;
       height = Math.max(1, m.elementHeight);
     };

@@ -222,7 +222,6 @@ export default function DotsCanvas({
   const scenesRef = useRef<Map<string, SceneConfig>>(new Map());
   const scenePointsRef = useRef<Map<string, Point[]>>(new Map());
   const currentHomeRef = useRef<Point[]>([]);
-  const rafIdRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
   const phaseRef = useRef<"initial" | "transition" | "scrolling">("initial");
@@ -547,6 +546,28 @@ export default function DotsCanvas({
     []
   );
 
+  const updateCurrentHomeTargets = useCallback(() => {
+    const targetPoints = getCurrentTargetPoints(scrollYRef.current);
+    if (!targetPoints) return;
+
+    if (currentHomeRef.current.length === 0) {
+      currentHomeRef.current = targetPoints.map((p) => ({ ...p }));
+      return;
+    }
+
+    for (let i = 0; i < targetPoints.length; i++) {
+      const target = targetPoints[i];
+      if (!target) continue;
+      const current = currentHomeRef.current[i];
+      if (current) {
+        current.x = lerp(current.x, target.x, morphSpeed);
+        current.y = lerp(current.y, target.y, morphSpeed);
+      } else {
+        currentHomeRef.current[i] = { ...target };
+      }
+    }
+  }, [getCurrentTargetPoints, morphSpeed]);
+
   // -------------------------------------------------------------------------
   // Physics Update
   // -------------------------------------------------------------------------
@@ -779,75 +800,30 @@ export default function DotsCanvas({
     }
   }, []);
 
+  const drawReducedMotion = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = colorGray;
+
+    const currentHome = currentHomeRef.current;
+    for (let i = 0; i < currentHome.length; i++) {
+      const home = currentHome[i];
+      ctx.beginPath();
+      ctx.arc(home.x, home.y, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, [colorGray, dotRadius]);
+
   // -------------------------------------------------------------------------
   // Animation Loop
   // -------------------------------------------------------------------------
-
-  const animate = useCallback(
-    (timestamp: number) => {
-      if (prefersReducedMotionRef.current) {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        const width = canvas.width / dpr;
-        const height = canvas.height / dpr;
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = colorGray;
-
-        const currentHome = currentHomeRef.current;
-        for (let i = 0; i < currentHome.length; i++) {
-          const home = currentHome[i];
-          ctx.beginPath();
-          ctx.arc(home.x, home.y, dotRadius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        return;
-      }
-
-      if (startTsRef.current === null) {
-        startTsRef.current = timestamp;
-        phaseRef.current = "initial";
-      }
-
-      if (lastTimeRef.current === null) {
-        lastTimeRef.current = timestamp;
-      }
-
-      const rawDt = (timestamp - lastTimeRef.current) / 1000;
-      const dt = Math.min(rawDt, 0.033);
-      lastTimeRef.current = timestamp;
-
-      const time = timestamp / 1000;
-      timeRef.current = time;
-
-      // Update current home positions based on scroll
-      const targetPoints = getCurrentTargetPoints(scrollYRef.current);
-      if (targetPoints) {
-        if (currentHomeRef.current.length === 0) {
-          currentHomeRef.current = targetPoints.map((p) => ({ ...p }));
-        } else {
-          for (let i = 0; i < targetPoints.length; i++) {
-            const current = currentHomeRef.current[i];
-            const target = targetPoints[i];
-            if (current && target) {
-              current.x = lerp(current.x, target.x, morphSpeed);
-              current.y = lerp(current.y, target.y, morphSpeed);
-            }
-          }
-        }
-      }
-
-      updatePhysics(dt, time, timestamp);
-      draw();
-
-      rafIdRef.current = requestAnimationFrame(animate);
-    },
-    [colorGray, dotRadius, getCurrentTargetPoints, morphSpeed, updatePhysics, draw]
-  );
-
   // -------------------------------------------------------------------------
   // Effects
   // -------------------------------------------------------------------------
@@ -875,10 +851,35 @@ export default function DotsCanvas({
   useEffect(() => {
     const unsubscribe = subscribe((state) => {
       scrollYRef.current = state.scrollY;
+
+      if (prefersReducedMotionRef.current) {
+        updateCurrentHomeTargets();
+        drawReducedMotion();
+        return;
+      }
+
+      if (startTsRef.current === null) {
+        startTsRef.current = state.time;
+        phaseRef.current = "initial";
+      }
+
+      let dt = 0;
+      if (lastTimeRef.current !== null) {
+        const rawDt = (state.time - lastTimeRef.current) / 1000;
+        dt = Math.min(Math.max(rawDt, 0), 0.033);
+      }
+      lastTimeRef.current = state.time;
+
+      const timeSeconds = state.time / 1000;
+      timeRef.current = timeSeconds;
+
+      updateCurrentHomeTargets();
+      updatePhysics(dt, timeSeconds, state.time);
+      draw();
     });
 
     return unsubscribe;
-  }, []);
+  }, [draw, drawReducedMotion, updateCurrentHomeTargets, updatePhysics]);
 
   useEffect(() => {
     if (canvasSize.width > 0 && scenesRef.current.size > 0) {
@@ -891,7 +892,7 @@ export default function DotsCanvas({
 
     initializeDots(canvasSize.width, canvasSize.height);
 
-    const initialPoints = getCurrentTargetPoints(0);
+    const initialPoints = getCurrentTargetPoints(scrollYRef.current);
     if (initialPoints) {
       currentHomeRef.current = initialPoints.map((p) => ({ ...p }));
     }
@@ -899,19 +900,11 @@ export default function DotsCanvas({
     startTsRef.current = null;
     phaseRef.current = "initial";
     lastTimeRef.current = null;
-    rafIdRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-    };
   }, [
     scenesLoaded,
     canvasSize,
     initializeDots,
     getCurrentTargetPoints,
-    animate,
   ]);
 
   // -------------------------------------------------------------------------

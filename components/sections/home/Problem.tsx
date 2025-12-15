@@ -1,32 +1,40 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { subscribe } from "@/motion/engine";
+import { getScrollContainer, subscribe } from "@/motion/engine";
+import { measureElement } from "@/motion/measures";
+import { observeResize } from "@/motion/observe";
 
 export default function Problem() {
   const [progress, setProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sectionTopRef = useRef(0);
+  const sectionHeightRef = useRef(1);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const stickyDiv = container.parentElement;
+    const section = stickyDiv?.parentElement as HTMLElement | null;
+    if (!section) return;
+
+    const recompute = () => {
+      const { elementTop, elementHeight } = measureElement(
+        section,
+        getScrollContainer()
+      );
+      sectionTopRef.current = elementTop;
+      sectionHeightRef.current = Math.max(1, elementHeight);
+    };
+
+    recompute();
+    const stopResize = observeResize(section, recompute);
+
     const unsubscribe = subscribe((state) => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      // Navigate up: Problem div -> sticky div -> section (h-[300vh])
-      const stickyDiv = container.parentElement;
-      const section = stickyDiv?.parentElement;
-      if (!section) return;
-
-      // Get the section's scroll-relative position
-      const sectionTop = section.offsetTop;
-      const sectionHeight = section.offsetHeight;
       const viewportH = state.viewportH;
-
-      // Progress goes from 0 to 1 as we scroll through the tall section
-      // Start when section top reaches viewport top
-      // End when section bottom reaches viewport bottom
-      const scrollStart = sectionTop;
-      const scrollEnd = sectionTop + sectionHeight - viewportH;
+      const scrollStart = sectionTopRef.current;
+      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
       const scrollRange = scrollEnd - scrollStart;
 
       if (scrollRange <= 0) {
@@ -40,7 +48,10 @@ export default function Problem() {
       setProgress(clampedProgress);
     });
 
-    return unsubscribe;
+    return () => {
+      stopResize();
+      unsubscribe();
+    };
   }, []);
 
   // First paragraph: starts fully visible, fades to gray as you scroll

@@ -6,7 +6,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { subscribe } from "@/motion/engine";
+import { getScrollContainer, subscribe } from "@/motion/engine";
 import { clamp01 } from "@/motion/math";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
@@ -49,7 +49,7 @@ export default function Scene({
     let frame = 0;
 
     const recompute = () => {
-      const m = measureElement(el);
+      const m = measureElement(el, getScrollContainer());
       top = m.elementTop;
       height = Math.max(1, m.elementHeight);
     };
@@ -84,10 +84,11 @@ export default function Scene({
     };
   }, [mode, offsetPx, everyNFrames]);
 
-  const mergedStyle = {
+  type SceneStyle = React.CSSProperties & { ["--p"]?: number };
+  const mergedStyle: SceneStyle = {
     ...(style ?? {}),
-    ["--p" as any]: p,
-  } as React.CSSProperties;
+    ["--p"]: p,
+  };
 
   return (
     <div ref={ref} className={className} style={mergedStyle}>
