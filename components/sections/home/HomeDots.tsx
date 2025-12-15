@@ -18,9 +18,9 @@ export default function ExamplePage() {
       targetWidth={500}
       targetHeight={500}
       targetAnchor="center"
-      initialDurationMs={3000}    // 5 seconds for initial convergence
+      initialDurationMs={1500}    // 5 seconds for initial convergence
       transitionDurationMs={500} // 1.5 seconds to transition to breathing
-      morphSpeed={0.4}           // How quickly dots follow scroll (0-1)
+      morphSpeed={0.7}           // How quickly dots follow scroll (0-1)
       colorGray="#A1A1AA"         // Color when dots are moving
       colorAccent="#00A452"       // Color when dots are settled (green)
     >

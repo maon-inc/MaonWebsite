@@ -27,7 +27,7 @@ export default function HomePage() {
   return (
     <main className="relative w-full h-screen overflow-hidden">
       {/* Fixed background: HomeDots */}
-      <div className="fixed inset-0 w-full h-full z-0">
+      <div className="absolute w-full h-full z-0">
         <HomeDots />
       </div>
 
