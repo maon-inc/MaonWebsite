@@ -5,7 +5,7 @@ import Image from "next/image";
 export default function Intro() {
   return (
     <div className="flex items-center justify-center px-6 md:px-12 h-full">
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 max-w-[1200px] mx-auto">
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8 px-4 md:gap-16 max-w-[1200px] mx-auto">
         {/* Image on the left */}
         <div className="flex-shrink-0">
           <Image
@@ -25,7 +25,7 @@ export default function Intro() {
             <br />
             Flow Ring
           </h2>
-          <p className="text-m-lato-16-regular md:text-d-lato-24-regular">
+          <p className="text-d-lato-24-regular md:text-d-lato-24-regular">
             When you feel off, we&apos;ll guide your body back to balance with
             subtle, intelligent haptic cues &amp; app limits.
           </p>

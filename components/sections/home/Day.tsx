@@ -70,9 +70,11 @@ const svgUrls = steps.map(s => s.svgUrl);
 function CrossfadeText({
   steps,
   activeIndex,
+  isDesktop,
 }: {
   steps: Step[];
   activeIndex: number;
+  isDesktop: boolean;
 }) {
   const [displayIndex, setDisplayIndex] = useState(activeIndex);
   const [opacity, setOpacity] = useState(1);
@@ -107,12 +109,12 @@ function CrossfadeText({
   const step = steps[displayIndex];
 
   return (
-    <div className="text-center max-w-[700px] mx-auto">
+    <div className={`${isDesktop ? "text-left max-w-[500px] mt-30 ml-5" : "text-center max-w-[700px] mx-auto"}`}>
       <img
         src={step.iconUrl}
         alt=""
         aria-hidden="true"
-        className="mx-auto mb-6"
+        className={`${isDesktop ? "" : "mx-auto"} mb-6`}
         style={{ width: "50px", height: "auto", opacity, transition: "opacity 300ms ease-in-out" }}
       />
       <h2
@@ -125,7 +127,7 @@ function CrossfadeText({
         {step.title}
       </h2>
       <p
-        className="text-d-lato-24-regular w-[300px] md:w-[500px] ml-auto mr-auto"
+        className={`text-d-lato-24-regular ${isDesktop ? "w-[400px]" : "w-[300px] mb-20 ml-auto mr-auto"}`}
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
@@ -340,8 +342,8 @@ export default function Day() {
     }
   }, [activeSvgUrl, activeIndex]);
 
-  const svgScale = isDesktop ? 1.5 : 1.0;
-  const dotAnchor = isDesktop ? "top-left" : "top-center";
+  const svgScale = isDesktop ? 1.5 : 1.3;
+  const dotAnchor = isDesktop ? "bottom-center" : "center";
   const lockInMs = isDesktop ? 500 : 350;
   const homeSnapMs = isDesktop ? 350 : 280;
   const swayRampMs = isDesktop ? 900 : 700;
@@ -376,11 +378,12 @@ export default function Day() {
       </div>
 
       {/* Content in sticky container */}
-      <div className="sticky top-0 h-screen flex items-end justify-center pb-16 md:pb-24 col-start-1 row-start-1">
-        <div className="flex flex-col items-center justify-center px-6 md:px-0 gap-12 relative z-10">
+      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-start justify-start" : "items-end justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
+        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-center"} px-6 md:px-12 lg:px-16 gap-12 relative z-10 ${isDesktop ? "pt-24" : ""}`}>
           <CrossfadeText
             steps={steps}
             activeIndex={activeIndex}
+            isDesktop={isDesktop}
           />
         </div>
       </div>

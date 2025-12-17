@@ -78,9 +78,9 @@ export default function Problem() {
   return (
     <div
       ref={containerRef}
-      className="flex items-start md:items-center justify-center md:justify-start px-6 pt-20 md:pt-0 md:px-12 lg:px-16 md:w-full h-full"
+      className="flex items-center justify-center px-6 md:px-16 lg:px-24 xl:px-32 w-full h-full"
     >
-      <div className="text-left md:max-w-[600px] lg:max-w-[800px]">
+      <div className="text-left max-w-[600px] md:max-w-[700px] lg:max-w-[800px]">
         <p
           className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6"
           style={{ color: `rgba(23, 23, 23, ${fadeOutOpacity})` }}

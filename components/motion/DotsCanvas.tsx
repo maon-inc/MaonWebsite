@@ -199,6 +199,9 @@ function calculateTargetOffset(
     offsetY = 0;
   } else if (anchor.includes("bottom")) {
     offsetY = canvasHeight - targetHeight;
+  } else if (anchor === "center") {
+    // Center with slight downward offset
+    offsetY = (canvasHeight - targetHeight) / 2 + canvasHeight * 0.005;
   } else {
     offsetY = (canvasHeight - targetHeight) / 2;
   }

@@ -69,7 +69,7 @@ export default function HomePage() {
     };
   }, []);
 
-  const targetSize = isMobile ? 320 : 500;
+  const targetSize = isMobile ? 350 : 500;
 
   return (
     <DotsCanvas
