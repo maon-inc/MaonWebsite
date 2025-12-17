@@ -49,7 +49,7 @@ const steps: Step[] = [
     svgUrl: "/assets/day_in_the_life/file-5.svg",
     iconUrl: "/assets/day_time_svg/6.svg",
     title: "Play or Work Intentionally",
-    body: "Your state is inferred automatically, delivering energy when you want to engage and guardrails when you want discipline.",
+    body: "Your state is inferred automatically, keeping you locked in for work or free to unwind.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-6.svg",
@@ -108,26 +108,72 @@ function CrossfadeText({
 
   const step = steps[displayIndex];
 
+  // Mobile: icon is fixed position, title and body flow with margin-top
+  if (!isDesktop) {
+    return (
+      <div className="relative text-center w-full" style={{ marginTop: "60vh" }}>
+        {/* Icon - fixed position at top of this container */}
+        <div 
+          className="absolute left-1/2 -translate-x-1/2 flex justify-center"
+          style={{ top: 0, height: "50px" }}
+        >
+          <img
+            src={step.iconUrl}
+            alt=""
+            aria-hidden="true"
+            style={{ width: "50px", height: "50px", opacity, transition: "opacity 300ms ease-in-out" }}
+          />
+        </div>
+        {/* Title - flows below icon with margin-top */}
+        <h2
+          className="text-d-merriweather-32-regular mt-16 mb-3 px-4"
+          style={{
+            opacity,
+            transition: "opacity 300ms ease-in-out",
+          }}
+        >
+          {step.title}
+        </h2>
+        {/* Body text - flows below title */}
+        <p
+          className="text-d-lato-24-regular w-[350px] mx-auto"
+          style={{
+            opacity,
+            transition: "opacity 300ms ease-in-out",
+          }}
+        >
+          {step.body}
+        </p>
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
-    <div className={`${isDesktop ? "text-left max-w-[500px] mt-32 ml-20" : "text-center max-w-[700px] mx-auto"}`}>
-      <img
-        src={step.iconUrl}
-        alt=""
-        aria-hidden="true"
-        className={`${isDesktop ? "" : "mx-auto"} mb-6`}
-        style={{ width: "50px", height: "auto", opacity, transition: "opacity 300ms ease-in-out" }}
-      />
+    <div className="relative text-left max-w-[500px] mt-32 ml-20">
+      {/* Icon - fixed position and size */}
+      <div className="mb-6" style={{ height: "50px" }}>
+        <img
+          src={step.iconUrl}
+          alt=""
+          aria-hidden="true"
+          style={{ width: "50px", height: "50px", opacity, transition: "opacity 300ms ease-in-out" }}
+        />
+      </div>
+      {/* Title - fixed height to prevent layout shift */}
       <h2
-        className="text-d-merriweather-32-regular mb-5"
+        className="text-d-merriweather-32-regular mb-4"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
+          minHeight: "41.6px",
         }}
       >
         {step.title}
       </h2>
+      {/* Body text - can vary in height */}
       <p
-        className={`text-d-lato-24-regular ${isDesktop ? "w-[400px]" : "w-[300px] mb-20 ml-auto mr-auto"}`}
+        className="text-d-lato-24-regular w-[400px]"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
@@ -143,8 +189,10 @@ export default function Day() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeSvgUrl, setActiveSvgUrl] = useState(steps[0].svgUrl);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const lastActiveIndexRef = useRef(0);
   const lastProgressRef = useRef(0);
+  const progressRef = useRef(0);
   const lastSvgUrlRef = useRef(steps[0].svgUrl);
   const sectionRef = useRef<HTMLElement>(null);
   const sectionTopRef = useRef(0);
@@ -289,6 +337,12 @@ export default function Day() {
       }
 
       lastProgressRef.current = progress;
+      
+      // Update scroll progress for the progress bar (throttled)
+      if (Math.abs(progress - progressRef.current) > 0.005) {
+        progressRef.current = progress;
+        setScrollProgress(progress);
+      }
 
       if (nextIndex !== currentIndex) {
         const now = performance.now();
@@ -378,8 +432,34 @@ export default function Day() {
       </div>
 
       {/* Content in sticky container */}
-      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-end justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
-        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-center"} px-6 md:px-12 lg:px-16 gap-12 relative z-10`}>
+      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-start justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
+        {/* Text box - fixed position on mobile, positioned above the icon */}
+        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[54vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+          {/* Progress fill */}
+          <div 
+            className="absolute inset-0 rounded-[10px]" 
+            style={{ 
+              backgroundColor: "#97CEE7", 
+              width: `${scrollProgress * 100}%`,
+              transition: "width 100ms ease-out"
+            }} 
+          />
+          <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
+        </div>
+        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-start"} px-6 md:px-12 lg:px-16 relative z-10 w-full`}>
+          {/* Text box - desktop only */}
+          <div className={`absolute ${isDesktop ? "top-[4rem] ml-20" : "hidden"} rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+            {/* Progress fill */}
+            <div 
+              className="absolute inset-0 rounded-[10px]" 
+              style={{ 
+                backgroundColor: "#97CEE7", 
+                width: `${scrollProgress * 100}%`,
+                transition: "width 100ms ease-out"
+              }} 
+            />
+            <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
+          </div>
           <CrossfadeText
             steps={steps}
             activeIndex={activeIndex}
