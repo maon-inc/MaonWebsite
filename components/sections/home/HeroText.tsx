@@ -42,7 +42,7 @@ export default function HeroText() {
 
       {/* Mobile version - appears after 2 seconds, hides on scroll */}
       <div
-        className={`md:hidden absolute bottom-24 left-12 right-12 z-20 transition-opacity duration-500 ${
+        className={`md:hidden absolute bottom-24 left-6 right-6 z-20 transition-opacity duration-500 flex flex-col items-center text-center ${
           isVisible && !isScrolled ? "opacity-100" : "opacity-0"
         }`}
       >

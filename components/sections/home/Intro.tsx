@@ -19,7 +19,7 @@ export default function Intro() {
         </div>
 
         {/* Text content on the right */}
-        <div className="flex flex-col gap-6 max-w-[500px]">
+        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-6 max-w-[500px]">
           <h2 className="text-m-merriweather-30-regular md:text-d-merriweather-40-regular italic">
             Introducing the
             <br />
