@@ -80,7 +80,7 @@ export default function HomePage() {
       targetAnchor="center"
       initialDurationMs={1500}
       transitionDurationMs={500}
-      morphSpeed={0.7}
+      morphSpeed={0.4}
       colorGray="#A1A1AA"
       colorAccent="#00A452"
     >
@@ -95,14 +95,17 @@ export default function HomePage() {
               svgUrl="/assets/hero_svg.svg"
               className="relative min-h-screen"
               scrollStartOffset={-200}
+              morphSpeedMult={2}
+              stiffnessMult={2}
+              snapOnEnter
             >
               <HeroText />
             </DotsScene>
 
             <section className="relative grid h-[300vh]">
               <div className="pointer-events-none col-start-1 row-start-1">
-                <DotsScene scatter className="h-[100vh]" />
-                <DotsScene dissipate className="h-[100vh]" />
+                <DotsScene scatter className="h-[100vh]" morphSpeedMult={2} stiffnessMult={5} />
+                <DotsScene dissipate className="h-[100vh]" morphSpeedMult={2} stiffnessMult={2} />
               </div>
 
               <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">

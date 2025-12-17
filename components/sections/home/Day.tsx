@@ -9,6 +9,7 @@ import { retargetToSvg } from "@/components/motion/DotsCanvas";
 
 interface Step {
   svgUrl: string;
+  iconUrl: string;
   title: string;
   body: string;
 }
@@ -16,41 +17,49 @@ interface Step {
 const steps: Step[] = [
   {
     svgUrl: "/assets/day_in_the_life/file-1.svg",
+    iconUrl: "/assets/day_time_svg/1.svg",
     title: "Wake Calmly",
     body: "Gentle haptics wake you smoothly, so you start the day steady instead of startled.",
   },
   {
-    svgUrl: "/assets/day_in_the_life/file-1.svg",
+    svgUrl: "/assets/day_in_the_life/file-2.svg",
+    iconUrl: "/assets/day_time_svg/2.svg",
     title: "Start Energized",
     body: "Morning haptics lift your energy while distractions stay blocked, helping you avoid reflexive scrolling.",
   },
   {
-    svgUrl: "/assets/day_in_the_life/file-4.svg",
+    svgUrl: "/assets/day_in_the_life/file-3.svg",
+    iconUrl: "/assets/day_time_svg/3.svg",
     title: "Arrive at Work Centered",
     body: "When stress rises, calming patterns stabilize your body so you stay clear and productive.",
   },
   {
-    svgUrl: "/assets/day_in_the_life/file-3.svg",
+    svgUrl: "/assets/day_in_the_life/file-4.svg",
+    iconUrl: "/assets/day_time_svg/4.svg",
     title: "Maintain Focus",
     body: "As attention dips, energizing haptics restore focus and prevent the midday slump.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-4.svg",
+    iconUrl: "/assets/day_time_svg/5.svg",
     title: "Drive Safely",
     body: "Balanced haptics keep arousal in check so you stay alert and avoid end-of-day fatigue on the road.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-5.svg",
+    iconUrl: "/assets/day_time_svg/6.svg",
     title: "Play or Work Intentionally",
     body: "Your state is inferred automatically, delivering energy when you want to engage and guardrails when you want discipline.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-6.svg",
+    iconUrl: "/assets/day_time_svg/7.svg",
     title: "Wind Down Naturally",
     body: "Calming patterns ease your body into rest while impulse-driven apps stay out of reach.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-7.svg",
+    iconUrl: "/assets/day_time_svg/8.svg",
     title: "Sleep Deeply",
     body: "Haptics calm your nervous system, helping you fall asleep and recover more effectively.",
   }
@@ -96,9 +105,16 @@ function CrossfadeText({
   const step = steps[displayIndex];
 
   return (
-    <div className="text-left max-w-[600px]">
+    <div className="text-center max-w-[700px] mx-auto">
+      <img
+        src={step.iconUrl}
+        alt=""
+        aria-hidden="true"
+        className="mx-auto mb-6"
+        style={{ width: "50px", height: "auto", opacity, transition: "opacity 300ms ease-in-out" }}
+      />
       <h2
-        className="text-d-merriweather-32-regular mb-6"
+        className="text-d-merriweather-32-regular mb-5"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
@@ -107,7 +123,7 @@ function CrossfadeText({
         {step.title}
       </h2>
       <p
-        className="text-d-lato-24-regular"
+        className="text-d-lato-24-regular w-[300px] md:w-[500px] ml-auto mr-auto"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
@@ -121,9 +137,11 @@ function CrossfadeText({
 
 export default function Day() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeSvgUrl, setActiveSvgUrl] = useState(steps[0].svgUrl);
   const [isDesktop, setIsDesktop] = useState(false);
   const lastActiveIndexRef = useRef(0);
   const lastProgressRef = useRef(0);
+  const lastSvgUrlRef = useRef(steps[0].svgUrl);
   const sectionRef = useRef<HTMLElement>(null);
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
@@ -239,16 +257,18 @@ export default function Day() {
       if (nextIndex !== currentIndex) {
         lastActiveIndexRef.current = nextIndex;
         setActiveIndex(nextIndex);
-        retargetToSvg(
-          steps[nextIndex].svgUrl,
-          goingUp ? "snap" : "soft",
-          {
-            burstMs: 250,
-            stiffnessMult: 2.0,
-            dampingMult: 0.9,
-            maxSpeedMult: 1.6,
-          }
-        );
+
+        const nextSvgUrl = steps[nextIndex].svgUrl;
+        if (nextSvgUrl !== lastSvgUrlRef.current) {
+          lastSvgUrlRef.current = nextSvgUrl;
+          setActiveSvgUrl(nextSvgUrl);
+          retargetToSvg(nextSvgUrl, goingUp ? "snap" : "soft", {
+            burstMs: 320,
+            stiffnessMult: 2.2,
+            dampingMult: 0.92,
+            maxSpeedMult: 1.9,
+          });
+        }
       }
     });
 
@@ -258,29 +278,33 @@ export default function Day() {
     };
   }, []);
 
-  const currentStep = steps[activeIndex];
   const svgScale = isDesktop ? 1.5 : 1.0;
-  const lockInMs = isDesktop ? 350 : 250;
+  const dotAnchor = isDesktop ? "center-left" : "center";
+  const lockInMs = isDesktop ? 500 : 350;
+  const homeSnapMs = isDesktop ? 350 : 280;
   const swayRampMs = isDesktop ? 900 : 700;
-  const settleRadiusPx = isDesktop ? 60 : 45;
-  const snapRadiusPx = isDesktop ? 2.5 : 2.0;
-  const snapSpeedPxPerSec = isDesktop ? 40 : 35;
+  const settleRadiusPx = isDesktop ? 10 : 8;
+  const snapRadiusPx = isDesktop ? 6 : 5;
+  const snapSpeedPxPerSec = isDesktop ? 220 : 200;
 
   return (
     <section ref={sectionRef} className="relative grid h-[800vh]">
       {/* DotsScene layer - covers full section height for scroll registration */}
       <div className="pointer-events-none col-start-1 row-start-1">
         <DotsScene
-          svgUrl={currentStep.svgUrl}
+          svgUrl={activeSvgUrl}
           className="h-full"
           stiffnessMult={1.8}
           dampingMult={0.9}
           maxSpeedMult={1.5}
           snapOnEnter
           targetScale={svgScale}
+          targetAnchor={dotAnchor}
           lockInMs={lockInMs}
+          homeSnapMs={homeSnapMs}
           swayRampMs={swayRampMs}
           swayStyle="targetOffset"
+          morphSpeedMult={2.8}
           settleRadiusPx={settleRadiusPx}
           snapRadiusPx={snapRadiusPx}
           snapSpeedPxPerSec={snapSpeedPxPerSec}
@@ -288,8 +312,8 @@ export default function Day() {
       </div>
 
       {/* Content in sticky container */}
-      <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
-        <div className="flex flex-col items-center justify-center px-6 md:px-0 h-full gap-12 relative z-10">
+      <div className="sticky top-0 h-screen flex items-end justify-center pb-16 md:pb-24 col-start-1 row-start-1">
+        <div className="flex flex-col items-center justify-center px-6 md:px-0 gap-12 relative z-10">
           <CrossfadeText
             steps={steps}
             activeIndex={activeIndex}

@@ -40,6 +40,8 @@ interface DotsSceneProps {
   snapRadiusPx?: number;
   /** Speed threshold for snap-to-home during lock; default 0 disables */
   snapSpeedPxPerSec?: number;
+  /** Per-scene target anchor override. Default uses global DotsCanvas anchor */
+  targetAnchor?: "center" | "center-left" | "center-right" | "top-center" | "top-left" | "top-right" | "bottom-center" | "bottom-left" | "bottom-right";
   /**
    * Scroll offset from the element's top where morphing to this SVG begins.
    * Can be negative to start before the element enters viewport.
@@ -90,6 +92,7 @@ export default function DotsScene({
   settleRadiusPx = 0,
   snapRadiusPx = 0,
   snapSpeedPxPerSec = 0,
+  targetAnchor,
   scrollStartOffset = 0,
   children,
   className,
@@ -132,11 +135,11 @@ export default function DotsScene({
 
     const key =
       resolved === "svg"
-        ? `svg:${svgUrl ?? ""}|scale:${targetScale}`
+        ? `svg:${svgUrl ?? ""}|scale:${targetScale}|anchor:${targetAnchor ?? "default"}`
         : resolved;
 
     return { mode: resolved, providerKey: key };
-  }, [dissipate, disperse, scatter, svgUrl, targetScale]);
+  }, [dissipate, disperse, scatter, svgUrl, targetScale, targetAnchor]);
 
   const provider: DotTargetProvider = useMemo(() => {
     if (mode === "scatter") {
@@ -192,6 +195,7 @@ export default function DotsScene({
         settleRadiusPx,
         snapRadiusPx,
         snapSpeedPxPerSec,
+        targetAnchor,
       });
     };
 
@@ -275,6 +279,8 @@ export default function DotsScene({
     swayStyle,
     svgUrl,
     targetScale,
+    targetAnchor,
+    lockInMs,
     homeSnapMs,
     unregisterScene,
   ]);

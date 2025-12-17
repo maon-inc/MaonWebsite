@@ -9,6 +9,9 @@ export default function Intro() {
       svgUrl="/assets/intro.svg"
       className="relative min-h-screen flex items-center justify-center"
       scrollStartOffset={-200}
+      morphSpeedMult={2}
+      stiffnessMult={2}
+      snapOnEnter
     >
       <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 px-6 md:px-12 max-w-[1200px] mx-auto">
         {/* Image on the left */}
@@ -18,7 +21,7 @@ export default function Intro() {
             alt="Flow Ring and App"
             width={400}
             height={600}
-            className="w-[280px] md:w-[400px] h-auto"
+            className="w-[280px] md:w-[300px] h-auto"
             priority
           />
         </div>

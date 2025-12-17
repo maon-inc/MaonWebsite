@@ -46,6 +46,7 @@ interface SceneConfig {
   snapRadiusPx: number;
   snapSpeedPxPerSec: number;
   morphSpeedMult: number;
+  targetAnchor?: TargetAnchor;
 }
 
 type SceneConfigInput = Omit<SceneConfig, "order">;
@@ -385,16 +386,18 @@ export default function DotsCanvas({
       canvasWidth: number,
       canvasHeight: number,
       dotCount: number,
-      targetScale: number = 1
+      targetScale: number = 1,
+      sceneAnchor?: TargetAnchor
     ): Promise<Point[]> => {
       const fitW = targetWidth * targetScale;
       const fitH = targetHeight * targetScale;
+      const anchor = sceneAnchor ?? targetAnchor;
       const { offsetX, offsetY } = calculateTargetOffset(
         canvasWidth,
         canvasHeight,
         fitW,
         fitH,
-        targetAnchor
+        anchor
       );
 
       try {
@@ -429,6 +432,31 @@ export default function DotsCanvas({
 
   const registerScene = useCallback((config: SceneConfigInput) => {
     const prev = scenesRef.current.get(config.id);
+
+    const fieldsEqual =
+      prev &&
+      prev.scrollStart === config.scrollStart &&
+      prev.scrollEnd === config.scrollEnd &&
+      prev.svgUrl === config.svgUrl &&
+      prev.providerKey === config.providerKey &&
+      prev.provider.mode === config.provider.mode &&
+      prev.stiffnessMult === config.stiffnessMult &&
+      prev.dampingMult === config.dampingMult &&
+      prev.maxSpeedMult === config.maxSpeedMult &&
+      prev.snapOnEnter === config.snapOnEnter &&
+      prev.targetScale === config.targetScale &&
+      prev.lockInMs === config.lockInMs &&
+      prev.homeSnapMs === config.homeSnapMs &&
+      prev.swayRampMs === config.swayRampMs &&
+      prev.swayStyle === config.swayStyle &&
+      prev.settleRadiusPx === config.settleRadiusPx &&
+      prev.snapRadiusPx === config.snapRadiusPx &&
+      prev.snapSpeedPxPerSec === config.snapSpeedPxPerSec &&
+      prev.morphSpeedMult === config.morphSpeedMult;
+
+    if (fieldsEqual) {
+      return;
+    }
 
     let order = sceneOrderRef.current.get(config.id);
     if (order === undefined) {
@@ -489,15 +517,16 @@ export default function DotsCanvas({
         let targets: Point[];
 
         if (scene.provider.mode === "svg") {
-        if (!scene.svgUrl) {
-          throw new Error(`DotsCanvas: svg scene "${scene.id}" missing svgUrl`);
-        }
+          if (!scene.svgUrl) {
+            throw new Error(`DotsCanvas: svg scene "${scene.id}" missing svgUrl`);
+          }
           targets = await getSvgTargets(
             scene.svgUrl,
             w,
             h,
             dotCount,
-            scene.targetScale
+            scene.targetScale,
+            scene.targetAnchor
           );
         } else {
           const maybe = scene.provider.getTargets(w, h, dotCount);
@@ -1065,10 +1094,10 @@ export default function DotsCanvas({
 
       void (async () => {
         const activeId = activeSceneIdRef.current;
-        const targetScale =
-          (activeId ? scenesRef.current.get(activeId)?.targetScale : undefined) ??
-          1;
-        const targets = await getSvgTargets(svgUrl, w, h, count, targetScale);
+        const activeScene = activeId ? scenesRef.current.get(activeId) : undefined;
+        const targetScale = activeScene?.targetScale ?? 1;
+        const sceneAnchor = activeScene?.targetAnchor;
+        const targets = await getSvgTargets(svgUrl, w, h, count, targetScale, sceneAnchor);
 
         const activeSceneId = activeSceneIdRef.current;
         if (activeSceneId) {
@@ -1180,6 +1209,7 @@ export default function DotsCanvas({
         activeControllerId === lockSceneIdRef.current &&
         sceneLockInMs > 0 &&
         timestamp < lockUntilRef.current;
+      const isDayScene = (activeConfig?.morphSpeedMult ?? 1) > 1.01;
 
       let initialProgress = 0;
       let transitionProgress = 0;
@@ -1365,6 +1395,22 @@ export default function DotsCanvas({
 
           const finalDx = targetX - dot.pos.x;
           const finalDy = targetY - dot.pos.y;
+          if (
+            isDayScene &&
+            !lockActive &&
+            sceneSnapRadiusPx > 0 &&
+            sceneSnapSpeedPxPerSec > 0
+          ) {
+            const dist = Math.hypot(finalDx, finalDy);
+            const speed = Math.hypot(dot.vel.x, dot.vel.y);
+            if (dist <= sceneSnapRadiusPx && speed <= sceneSnapSpeedPxPerSec) {
+              dot.pos.x = targetX;
+              dot.pos.y = targetY;
+              dot.vel.x = 0;
+              dot.vel.y = 0;
+              continue;
+            }
+          }
 
           if (
             lockActive &&
@@ -1508,13 +1554,18 @@ export default function DotsCanvas({
       let swayX: number;
       let swayY: number;
 
-      const drawSwayAllowed =
+      let drawSwayAllowed =
         !lockActive &&
         (!isTargetOffsetSway ||
           (activeScene?.settleRadiusPx ?? 0) === 0 ||
           dist <= (activeScene?.settleRadiusPx ?? 0));
 
-      if (!isTargetOffsetSway && drawSwayAllowed) {
+      if (isTargetOffsetSway) {
+        // Target-offset scenes sway via physics target offset; disable draw-time sway.
+        drawSwayAllowed = false;
+      }
+
+      if (drawSwayAllowed) {
         if (isBreathingOrScrolling && dot.coordinatedPhase) {
           const globalPhase = time * 0.3;
           swayX =
