@@ -42,7 +42,7 @@ export default function HeroText() {
 
       {/* Mobile version - appears after 2 seconds, hides on scroll */}
       <div
-        className={`md:hidden absolute bottom-32 left-12 right-12 z-20 transition-opacity duration-500 ${
+        className={`md:hidden absolute bottom-24 left-12 right-12 z-20 transition-opacity duration-500 ${
           isVisible && !isScrolled ? "opacity-100" : "opacity-0"
         }`}
       >
@@ -54,8 +54,12 @@ export default function HeroText() {
         </p>
         <Link
           href="/preorder"
-          className="inline-flex items-center justify-center gap-2 w-[208px] text-d-lato-20-regular text-[var(--text-primary)] border border-[var(--text-primary)] rounded-[9.03px] py-3 transition-opacity hover:opacity-70"
-          style={{ borderWidth: "0.9px" }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular"
+          style={{
+            border: "0.9px solid black",
+            borderRadius: "11.28px",
+            backgroundColor: "#D1EBF7",
+          }}
         >
           Join the waitlist
           <Image

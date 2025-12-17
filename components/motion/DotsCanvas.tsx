@@ -189,6 +189,10 @@ function calculateTargetOffset(
     offsetX = 0;
   } else if (anchor.includes("right")) {
     offsetX = canvasWidth - targetWidth;
+    // Move bottom-right slightly more to the left
+    if (anchor === "bottom-right") {
+      offsetX -= canvasWidth * 0.10; // 5% of canvas width to the left
+    }
   } else {
     offsetX = (canvasWidth - targetWidth) / 2;
   }
@@ -196,13 +200,14 @@ function calculateTargetOffset(
   // Vertical
   if (anchor === "top-center") {
     // Center in upper portion, leaving room for bottom text
-    const upperRegion = canvasHeight * 0.55;
+    const upperRegion = canvasHeight * 0.75;
     offsetY = (upperRegion - targetHeight) / 2;
     offsetY = Math.max(30, offsetY);
   } else if (anchor.includes("top")) {
     offsetY = 0;
   } else if (anchor.includes("bottom")) {
-    offsetY = canvasHeight - targetHeight;
+    // Position lower by adding offset below canvas bottom
+    offsetY = canvasHeight - targetHeight + canvasHeight * 0.08;
   } else if (anchor === "center") {
     // Center with slight downward offset
     offsetY = (canvasHeight - targetHeight) / 2 + canvasHeight * 0.005;

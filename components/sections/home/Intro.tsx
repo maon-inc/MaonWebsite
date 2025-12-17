@@ -35,6 +35,7 @@ export default function Intro() {
             style={{
               border: "0.9px solid black",
               borderRadius: "11.28px",
+              backgroundColor: "#D1EBF7",
             }}
           >
             Learn more

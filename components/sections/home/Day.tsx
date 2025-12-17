@@ -109,7 +109,7 @@ function CrossfadeText({
   const step = steps[displayIndex];
 
   return (
-    <div className={`${isDesktop ? "text-left max-w-[500px] mt-30 ml-5" : "text-center max-w-[700px] mx-auto"}`}>
+    <div className={`${isDesktop ? "text-left max-w-[500px] mt-32 ml-20" : "text-center max-w-[700px] mx-auto"}`}>
       <img
         src={step.iconUrl}
         alt=""
@@ -343,7 +343,7 @@ export default function Day() {
   }, [activeSvgUrl, activeIndex]);
 
   const svgScale = isDesktop ? 1.5 : 1.3;
-  const dotAnchor = isDesktop ? "bottom-center" : "center";
+  const dotAnchor = isDesktop ? "bottom-right" : "center";
   const lockInMs = isDesktop ? 500 : 350;
   const homeSnapMs = isDesktop ? 350 : 280;
   const swayRampMs = isDesktop ? 900 : 700;
@@ -378,8 +378,8 @@ export default function Day() {
       </div>
 
       {/* Content in sticky container */}
-      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-start justify-start" : "items-end justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
-        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-center"} px-6 md:px-12 lg:px-16 gap-12 relative z-10 ${isDesktop ? "pt-24" : ""}`}>
+      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-end justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
+        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-center"} px-6 md:px-12 lg:px-16 gap-12 relative z-10`}>
           <CrossfadeText
             steps={steps}
             activeIndex={activeIndex}
