@@ -38,6 +38,8 @@ interface SceneConfig {
   maxSpeedMult: number;
   snapOnEnter: boolean;
   targetScale: number;
+  targetAnchor?: TargetAnchor;
+  targetOffsetY?: number;
   lockInMs: number;
   homeSnapMs: number;
   swayRampMs: number;
@@ -46,7 +48,6 @@ interface SceneConfig {
   snapRadiusPx: number;
   snapSpeedPxPerSec: number;
   morphSpeedMult: number;
-  targetAnchor?: TargetAnchor;
 }
 
 type SceneConfigInput = Omit<SceneConfig, "order">;
@@ -188,7 +189,7 @@ function calculateTargetOffset(
   }
 
   if (anchor.includes("top")) {
-    offsetY = 0;
+    offsetY = anchor === "top-center" ? canvasHeight * 0.1 : 0;
   } else if (anchor.includes("bottom")) {
     offsetY = canvasHeight - targetHeight;
   } else {
@@ -387,7 +388,8 @@ export default function DotsCanvas({
       canvasHeight: number,
       dotCount: number,
       targetScale: number = 1,
-      sceneAnchor?: TargetAnchor
+      sceneAnchor?: TargetAnchor,
+      targetOffsetY?: number
     ): Promise<Point[]> => {
       const fitW = targetWidth * targetScale;
       const fitH = targetHeight * targetScale;
@@ -399,6 +401,7 @@ export default function DotsCanvas({
         fitH,
         anchor
       );
+      const finalOffsetY = offsetY + (targetOffsetY ?? 0);
 
       try {
         return await getCachedFittedSvgPoints({
@@ -408,7 +411,7 @@ export default function DotsCanvas({
           fitHeight: fitH,
           paddingPx: 0,
           offsetX,
-          offsetY,
+          offsetY: finalOffsetY,
         });
       } catch (error) {
         console.warn(`Failed to load SVG ${svgUrl}, using fallback:`, error);
@@ -419,7 +422,7 @@ export default function DotsCanvas({
         );
         return fallbackPoints.map((p) => ({
           x: p.x + offsetX,
-          y: p.y + offsetY,
+          y: p.y + finalOffsetY,
         }));
       }
     },
@@ -445,6 +448,8 @@ export default function DotsCanvas({
       prev.maxSpeedMult === config.maxSpeedMult &&
       prev.snapOnEnter === config.snapOnEnter &&
       prev.targetScale === config.targetScale &&
+      prev.targetAnchor === config.targetAnchor &&
+      prev.targetOffsetY === config.targetOffsetY &&
       prev.lockInMs === config.lockInMs &&
       prev.homeSnapMs === config.homeSnapMs &&
       prev.swayRampMs === config.swayRampMs &&
@@ -526,7 +531,8 @@ export default function DotsCanvas({
             h,
             dotCount,
             scene.targetScale,
-            scene.targetAnchor
+            scene.targetAnchor,
+            scene.targetOffsetY
           );
         } else {
           const maybe = scene.provider.getTargets(w, h, dotCount);
@@ -1097,7 +1103,15 @@ export default function DotsCanvas({
         const activeScene = activeId ? scenesRef.current.get(activeId) : undefined;
         const targetScale = activeScene?.targetScale ?? 1;
         const sceneAnchor = activeScene?.targetAnchor;
-        const targets = await getSvgTargets(svgUrl, w, h, count, targetScale, sceneAnchor);
+        const targets = await getSvgTargets(
+          svgUrl,
+          w,
+          h,
+          count,
+          targetScale,
+          sceneAnchor,
+          activeScene?.targetOffsetY
+        );
 
         const activeSceneId = activeSceneIdRef.current;
         if (activeSceneId) {
@@ -1403,7 +1417,10 @@ export default function DotsCanvas({
           ) {
             const dist = Math.hypot(finalDx, finalDy);
             const speed = Math.hypot(dot.vel.x, dot.vel.y);
-            if (dist <= sceneSnapRadiusPx && speed <= sceneSnapSpeedPxPerSec) {
+            if (
+              dist <= sceneSnapRadiusPx * 1.5 &&
+              speed <= sceneSnapSpeedPxPerSec
+            ) {
               dot.pos.x = targetX;
               dot.pos.y = targetY;
               dot.vel.x = 0;

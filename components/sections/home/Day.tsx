@@ -279,13 +279,14 @@ export default function Day() {
   }, []);
 
   const svgScale = isDesktop ? 1.5 : 1.0;
-  const dotAnchor = isDesktop ? "center-left" : "center";
+  const dotAnchor = "top-center";
   const lockInMs = isDesktop ? 500 : 350;
   const homeSnapMs = isDesktop ? 350 : 280;
   const swayRampMs = isDesktop ? 900 : 700;
   const settleRadiusPx = isDesktop ? 10 : 8;
-  const snapRadiusPx = isDesktop ? 6 : 5;
-  const snapSpeedPxPerSec = isDesktop ? 220 : 200;
+  const snapRadiusPx = isDesktop ? 12 : 10;
+  const snapSpeedPxPerSec = isDesktop ? 400 : 350;
+  const targetOffsetY = isDesktop ? -100 : -60;
 
   return (
     <section ref={sectionRef} className="relative grid h-[800vh]">
@@ -294,17 +295,18 @@ export default function Day() {
         <DotsScene
           svgUrl={activeSvgUrl}
           className="h-full"
-          stiffnessMult={1.8}
+          stiffnessMult={2.5}
           dampingMult={0.9}
           maxSpeedMult={1.5}
           snapOnEnter
           targetScale={svgScale}
           targetAnchor={dotAnchor}
+          targetOffsetY={targetOffsetY}
           lockInMs={lockInMs}
           homeSnapMs={homeSnapMs}
           swayRampMs={swayRampMs}
           swayStyle="targetOffset"
-          morphSpeedMult={2.8}
+          morphSpeedMult={4.0}
           settleRadiusPx={settleRadiusPx}
           snapRadiusPx={snapRadiusPx}
           snapSpeedPxPerSec={snapSpeedPxPerSec}
