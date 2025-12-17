@@ -111,9 +111,9 @@ interface DotsCanvasProps {
   transitionDurationMs?: number;
   /** How quickly dots follow scroll morphing (0-1, higher = snappier, default: 0.25) */
   morphSpeed?: number;
-  /** Gray color when dots are far from home (default: "#A1A1AA") */
+  /** Gray color when dots are far from home (default: reads from --dots-color-gray CSS variable) */
   colorGray?: string;
-  /** Accent color when dots are settled (default: "#00A452") */
+  /** Accent color when dots are settled (default: reads from --dots-color-accent CSS variable) */
   colorAccent?: string;
 }
 
@@ -254,6 +254,18 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     : { r: 161, g: 161, b: 170 };
 }
 
+/**
+ * Get a CSS custom property value from :root.
+ * Returns the fallback if the variable is not defined or we're in SSR.
+ */
+function getCssVariable(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return value || fallback;
+}
+
 // ============================================================================
 // Easing Functions
 // ============================================================================
@@ -298,9 +310,12 @@ export default function DotsCanvas({
   initialDurationMs = 5000,
   transitionDurationMs = 1500,
   morphSpeed = 0.25,
-  colorGray = "#A1A1AA",
-  colorAccent = "#00A452",
+  colorGray,
+  colorAccent,
 }: DotsCanvasProps) {
+  // CSS variable fallbacks (hardcoded for SSR, will be overwritten on mount)
+  const CSS_FALLBACK_GRAY = "#A1A1AA";
+  const CSS_FALLBACK_ACCENT = "#00A452";
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -355,18 +370,20 @@ export default function DotsCanvas({
   const lockSceneIdRef = useRef<string | null>(null);
   const lockStartRef = useRef<number>(0);
 
-  // Pre-parse colors
-  const grayRgbRef = useRef(hexToRgb(colorGray));
-  const accentRgbRef = useRef(hexToRgb(colorAccent));
+  // Pre-parse colors (use fallbacks for initial SSR render)
+  const grayRgbRef = useRef(hexToRgb(colorGray ?? CSS_FALLBACK_GRAY));
+  const accentRgbRef = useRef(hexToRgb(colorAccent ?? CSS_FALLBACK_ACCENT));
 
   // State
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [scenesVersion, setScenesVersion] = useState(0);
 
-  // Update colors when props change
+  // Resolve colors from CSS variables on mount, then update when props change
   useEffect(() => {
-    grayRgbRef.current = hexToRgb(colorGray);
-    accentRgbRef.current = hexToRgb(colorAccent);
+    const resolvedGray = colorGray ?? getCssVariable("--dots-color-gray", CSS_FALLBACK_GRAY);
+    const resolvedAccent = colorAccent ?? getCssVariable("--dots-color-accent", CSS_FALLBACK_ACCENT);
+    grayRgbRef.current = hexToRgb(resolvedGray);
+    accentRgbRef.current = hexToRgb(resolvedAccent);
   }, [colorGray, colorAccent]);
 
   // -------------------------------------------------------------------------
@@ -1666,7 +1683,10 @@ export default function DotsCanvas({
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = colorGray;
+    
+    // Use resolved gray color from ref (already resolved from CSS variable or prop)
+    const { r, g, b } = grayRgbRef.current;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
 
     const currentHome = currentHomeRef.current;
     for (let i = 0; i < currentHome.length; i++) {
@@ -1675,7 +1695,7 @@ export default function DotsCanvas({
       ctx.arc(home.x, home.y, dotRadius, 0, Math.PI * 2);
       ctx.fill();
     }
-  }, [colorGray, dotRadius]);
+  }, [dotRadius]);
 
   // -------------------------------------------------------------------------
   // Animation Loop

@@ -108,8 +108,6 @@ export default function HomePage() {
       initialDurationMs={1500}
       transitionDurationMs={500}
       morphSpeed={0.4}
-      colorGray="#A1A1AA"
-      colorAccent="#00A452"
     >
       <div className="relative w-full min-h-screen flex flex-col">
         <main className="relative w-full h-screen overflow-hidden flex-shrink-0">
