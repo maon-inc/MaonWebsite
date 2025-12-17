@@ -147,15 +147,25 @@ export default function Day() {
   const sectionRef = useRef<HTMLElement>(null);
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
+  const lastStepChangeRef = useRef<number>(0);
+  const STEP_CHANGE_COOLDOWN_MS = 150; // Minimum time between step changes
+  // Add refs to track pending updates:
+  const pendingIndexRef = useRef<number | null>(null);
+  const updateRafRef = useRef<number | null>(null);
+  // Add refs for frame skipping:
+  const lastScrollYRef = useRef<number>(0);
+  const frameCountRef = useRef<number>(0);
+  const prevSvgUrlRef = useRef<string>(steps[0].svgUrl);
 
   useEffect(() => {
-    // Preload all SVGs on mount
-    svgUrls.forEach(url => {
-      const link = document.createElement('link');
-      link.rel = 'prefetch';
-      link.href = url;
-      link.as = 'fetch';
-      document.head.appendChild(link);
+    // Preload all SVGs on mount to avoid loading during scroll
+    const uniqueSvgUrls = [...new Set(steps.map(s => s.svgUrl))];
+    
+    uniqueSvgUrls.forEach(url => {
+      // Trigger cache population
+      fetch(url)
+        .then(res => res.text())
+        .catch(() => {}); // Ignore errors, just warm cache
     });
   }, []);
 
@@ -217,6 +227,17 @@ export default function Day() {
     const stopResize = observeResize(section, recompute);
 
     const unsubscribe = subscribe((state) => {
+      // Add velocity-based frame skipping:
+      const scrollVelocity = Math.abs(state.scrollY - lastScrollYRef.current);
+      lastScrollYRef.current = state.scrollY;
+      frameCountRef.current++;
+
+      // Skip expensive calculations during very fast scrolling
+      const isFastScrolling = scrollVelocity > 100; // pixels per frame
+      if (isFastScrolling && frameCountRef.current % 3 !== 0) {
+        return; // Process every 3rd frame during fast scroll
+      }
+
       const viewportH = state.viewportH;
       const scrollStart = sectionTopRef.current;
       const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
@@ -268,28 +289,56 @@ export default function Day() {
       lastProgressRef.current = progress;
 
       if (nextIndex !== currentIndex) {
-        lastActiveIndexRef.current = nextIndex;
-        setActiveIndex(nextIndex);
+        const now = performance.now();
+        if (now - lastStepChangeRef.current < STEP_CHANGE_COOLDOWN_MS) {
+          return;
+        }
 
-        const nextSvgUrl = steps[nextIndex].svgUrl;
-        if (nextSvgUrl !== lastSvgUrlRef.current) {
-          lastSvgUrlRef.current = nextSvgUrl;
-          setActiveSvgUrl(nextSvgUrl);
-          retargetToSvg(nextSvgUrl, goingUp ? "snap" : "soft", {
-            burstMs: 320,
-            stiffnessMult: 2.2,
-            dampingMult: 0.92,
-            maxSpeedMult: 1.9,
+        lastStepChangeRef.current = now;
+        lastActiveIndexRef.current = nextIndex;
+        pendingIndexRef.current = nextIndex;
+
+        // Batch React updates outside the scroll handler
+        if (updateRafRef.current === null) {
+          updateRafRef.current = requestAnimationFrame(() => {
+            updateRafRef.current = null;
+            const idx = pendingIndexRef.current;
+            if (idx !== null) {
+              setActiveIndex(idx);
+              const svgUrl = steps[idx].svgUrl;
+              if (svgUrl !== lastSvgUrlRef.current) {
+                lastSvgUrlRef.current = svgUrl;
+                setActiveSvgUrl(svgUrl);
+              }
+            }
           });
         }
       }
     });
 
     return () => {
+      if (updateRafRef.current !== null) {
+        cancelAnimationFrame(updateRafRef.current);
+      }
       stopResize();
       unsubscribe();
     };
   }, []);
+
+  // Add separate effect for SVG retargeting:
+  useEffect(() => {
+    if (activeSvgUrl !== prevSvgUrlRef.current) {
+      const goingUp = activeIndex < (steps.findIndex(s => s.svgUrl === prevSvgUrlRef.current) ?? 0);
+      prevSvgUrlRef.current = activeSvgUrl;
+      
+      retargetToSvg(activeSvgUrl, goingUp ? "snap" : "soft", {
+        burstMs: 250,
+        stiffnessMult: 2.0,
+        dampingMult: 0.94,
+        maxSpeedMult: 1.6,
+      });
+    }
+  }, [activeSvgUrl, activeIndex]);
 
   const svgScale = isDesktop ? 1.5 : 1.0;
   const dotAnchor = "top-center";
