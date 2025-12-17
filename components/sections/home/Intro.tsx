@@ -31,11 +31,12 @@ export default function Intro() {
           </p>
           <a
             href="/how-it-works"
-            className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular"
+            className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black"
             style={{
               border: "0.9px solid black",
               borderRadius: "11.28px",
               backgroundColor: "#D1EBF7",
+              color: "black",
             }}
           >
             Learn more
