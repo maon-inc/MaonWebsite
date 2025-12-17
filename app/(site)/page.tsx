@@ -117,7 +117,7 @@ export default function HomePage() {
               <div className="pointer-events-none col-start-1 row-start-1">
                 <DotsScene
                   svgUrl="/assets/intro.svg"
-                  className="h-screen"
+                  className="h-[200vh]"
                   scrollStartOffset={-200}
                   morphSpeedMult={2}
                   stiffnessMult={2}
