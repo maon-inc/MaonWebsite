@@ -341,7 +341,7 @@ export default function Day() {
   }, [activeSvgUrl, activeIndex]);
 
   const svgScale = isDesktop ? 1.5 : 1.0;
-  const dotAnchor = "top-center";
+  const dotAnchor = isDesktop ? "top-left" : "top-center";
   const lockInMs = isDesktop ? 500 : 350;
   const homeSnapMs = isDesktop ? 350 : 280;
   const swayRampMs = isDesktop ? 900 : 700;

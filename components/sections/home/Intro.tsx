@@ -1,19 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import DotsScene from "@/components/motion/DotsScene";
 
 export default function Intro() {
   return (
-    <DotsScene
-      svgUrl="/assets/intro.svg"
-      className="relative min-h-screen flex items-center justify-center"
-      scrollStartOffset={-200}
-      morphSpeedMult={2}
-      stiffnessMult={2}
-      snapOnEnter
-    >
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 px-6 md:px-12 max-w-[1200px] mx-auto">
+    <div className="flex items-center justify-center px-6 md:px-12 h-full">
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 max-w-[1200px] mx-auto">
         {/* Image on the left */}
         <div className="flex-shrink-0">
           <Image
@@ -21,7 +13,7 @@ export default function Intro() {
             alt="Flow Ring and App"
             width={400}
             height={600}
-            className="w-[280px] md:w-[300px] h-auto"
+            className="w-[200px] md:w-[300px] h-auto"
             priority
           />
         </div>
@@ -56,6 +48,6 @@ export default function Intro() {
           </a>
         </div>
       </div>
-    </DotsScene>
+    </div>
   );
 }

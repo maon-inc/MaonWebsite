@@ -104,8 +104,8 @@ export default function HomePage() {
 
             <section className="relative grid h-[300vh]">
               <div className="pointer-events-none col-start-1 row-start-1">
-                <DotsScene scatter className="h-[100vh]" morphSpeedMult={2} stiffnessMult={5} />
-                <DotsScene dissipate className="h-[100vh]" morphSpeedMult={2} stiffnessMult={2} />
+                <DotsScene scatter className="h-[100vh]" morphSpeedMult={2} stiffnessMult={5} targetAnchor="center-left" />
+                <DotsScene dissipate className="h-[100vh]" morphSpeedMult={2} stiffnessMult={2} targetAnchor="center-left" />
               </div>
 
               <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
@@ -113,7 +113,22 @@ export default function HomePage() {
               </div>
             </section>
 
-            <Intro />
+            <section className="relative grid h-[200vh]">
+              <div className="pointer-events-none col-start-1 row-start-1">
+                <DotsScene
+                  svgUrl="/assets/intro.svg"
+                  className="h-screen"
+                  scrollStartOffset={-200}
+                  morphSpeedMult={2}
+                  stiffnessMult={2}
+                  snapOnEnter
+                />
+              </div>
+
+              <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
+                <Intro />
+              </div>
+            </section>
 
             <Day />
           </div>
