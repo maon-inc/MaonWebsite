@@ -38,6 +38,14 @@ interface SceneConfig {
   maxSpeedMult: number;
   snapOnEnter: boolean;
   targetScale: number;
+  lockInMs: number;
+  homeSnapMs: number;
+  swayRampMs: number;
+  swayStyle: "force" | "targetOffset";
+  settleRadiusPx: number;
+  snapRadiusPx: number;
+  snapSpeedPxPerSec: number;
+  morphSpeedMult: number;
 }
 
 type SceneConfigInput = Omit<SceneConfig, "order">;
@@ -319,6 +327,9 @@ export default function DotsCanvas({
   const targetsLoadingRef = useRef(false);
   const lastActiveControllerIdRef = useRef<string | null>(null);
   const lastActiveProviderKeyRef = useRef<string | null>(null);
+  const lockUntilRef = useRef<number>(0);
+  const lockSceneIdRef = useRef<string | null>(null);
+  const lockStartRef = useRef<number>(0);
 
   // Pre-parse colors
   const grayRgbRef = useRef(hexToRgb(colorGray));
@@ -935,17 +946,31 @@ export default function DotsCanvas({
       const providerKeyChanged = lastActiveProviderKeyRef.current !== providerKeyNow;
       lastActiveProviderKeyRef.current = providerKeyNow;
 
-      if (
-        activeScene &&
-        blend.mode === "svg" &&
-        activeScene.snapOnEnter &&
-        (controllerChanged || providerKeyChanged)
-      ) {
-        burstUntilRef.current = timeMs + SNAP_ON_ENTER_BURST_MS;
-        burstSceneIdRef.current = blend.activeSceneId;
-        burstStiffnessMultRef.current = activeScene.stiffnessMult;
-        burstDampingMultRef.current = activeScene.dampingMult;
-        burstMaxSpeedMultRef.current = activeScene.maxSpeedMult;
+      const maybeStartLock = (scene: SceneConfig | null, timeMs: number) => {
+        if (!scene || scene.provider.mode !== "svg" || scene.lockInMs <= 0) return;
+        lockStartRef.current = timeMs;
+        lockUntilRef.current = timeMs + scene.lockInMs;
+        lockSceneIdRef.current = scene.id;
+      };
+
+      if (activeScene && blend.mode === "svg") {
+        if (activeScene.snapOnEnter && (controllerChanged || providerKeyChanged)) {
+          burstUntilRef.current = timeMs + SNAP_ON_ENTER_BURST_MS;
+          burstSceneIdRef.current = blend.activeSceneId;
+          burstStiffnessMultRef.current = activeScene.stiffnessMult;
+          burstDampingMultRef.current = activeScene.dampingMult;
+          burstMaxSpeedMultRef.current = activeScene.maxSpeedMult;
+        }
+
+        if (controllerChanged || providerKeyChanged) {
+          maybeStartLock(activeScene, timeMs);
+          if (activeScene.homeSnapMs > 0) {
+            forceHomeSnapUntilRef.current = Math.max(
+              forceHomeSnapUntilRef.current,
+              timeMs + activeScene.homeSnapMs
+            );
+          }
+        }
       }
 
       if (
@@ -958,8 +983,13 @@ export default function DotsCanvas({
       const fromTargets = blend.from;
       const toTargets = blend.to;
       const blendT = blend.t;
+      const activeConfig =
+        blend.activeSceneId !== null
+          ? scenesRef.current.get(blend.activeSceneId) ?? null
+          : null;
+      const morphMult = activeConfig?.morphSpeedMult ?? 1;
       const homeBlend =
-        timeMs < forceHomeSnapUntilRef.current ? 1 : morphSpeed;
+        timeMs < forceHomeSnapUntilRef.current ? 1 : Math.min(1, morphSpeed * morphMult);
 
       if (currentHomeRef.current.length === 0) {
         const homes: Point[] = new Array(count);
@@ -1024,6 +1054,14 @@ export default function DotsCanvas({
           burstMaxSpeedMultRef.current = opts.maxSpeedMult ?? 1;
         }
       }
+      const maybeStartLock = (sceneId: string | null, timeMs: number) => {
+        if (!sceneId) return;
+        const scene = scenesRef.current.get(sceneId);
+        if (!scene || scene.provider.mode !== "svg" || scene.lockInMs <= 0) return;
+        lockStartRef.current = timeMs;
+        lockUntilRef.current = timeMs + scene.lockInMs;
+        lockSceneIdRef.current = scene.id;
+      };
 
       void (async () => {
         const activeId = activeSceneIdRef.current;
@@ -1037,6 +1075,13 @@ export default function DotsCanvas({
           const scene = scenesRef.current.get(activeSceneId);
           if (scene?.provider.mode === "svg") {
             sceneTargetsRef.current.set(activeSceneId, targets);
+            if (scene.homeSnapMs > 0) {
+              forceHomeSnapUntilRef.current = Math.max(
+                forceHomeSnapUntilRef.current,
+                timeMs + scene.homeSnapMs
+              );
+            }
+            maybeStartLock(activeSceneId, timeMs);
           }
         }
 
@@ -1105,6 +1150,12 @@ export default function DotsCanvas({
       const sceneMaxSpeedMult = applySceneOverrides
         ? activeConfig.maxSpeedMult
         : 1;
+      const sceneLockInMs = activeConfig?.lockInMs ?? 0;
+      const sceneSwayRampMs = activeConfig?.swayRampMs ?? 0;
+      const sceneSwayStyle = activeConfig?.swayStyle ?? "force";
+      const sceneSettleRadiusPx = activeConfig?.settleRadiusPx ?? 0;
+      const sceneSnapRadiusPx = activeConfig?.snapRadiusPx ?? 0;
+      const sceneSnapSpeedPxPerSec = activeConfig?.snapSpeedPxPerSec ?? 0;
 
       const applyBurst =
         activeControllerId !== null &&
@@ -1122,6 +1173,13 @@ export default function DotsCanvas({
       const maxSpeed = shouldApplyMaxSpeedClamp
         ? BASE_MAX_SPEED_PX_PER_S * effectiveMaxSpeedMult
         : 0;
+      const isSvgActive = activeModeRef.current === "svg";
+      const lockActive =
+        isSvgActive &&
+        activeControllerId !== null &&
+        activeControllerId === lockSceneIdRef.current &&
+        sceneLockInMs > 0 &&
+        timestamp < lockUntilRef.current;
 
       let initialProgress = 0;
       let transitionProgress = 0;
@@ -1249,13 +1307,13 @@ export default function DotsCanvas({
           const dy = home.y - dot.pos.y;
 
           // Higher stiffness for faster snapping during scroll
-          const stiffness =
+          let stiffness =
             dot.baseStiffness *
             1.2 *
             stiffnessMult *
             retargetBoost *
             effectiveStiffnessMult;
-          const noiseAmp = dot.baseNoiseAmp * 0.8 * noiseMult;
+          let noiseAmp = dot.baseNoiseAmp * 0.8 * noiseMult;
           let damping = dot.baseDamping * effectiveDampingMult;
 
           if (modeNow === "scatter") {
@@ -1268,32 +1326,94 @@ export default function DotsCanvas({
             }
           }
 
-          let fx = stiffness * dx;
-          let fy = stiffness * dy;
+          const useTargetOffset = isSvgActive && sceneSwayStyle === "targetOffset";
 
-          if (modeNow === "scatter") {
-            const jitter = noiseAmp * jitterMult;
-            fx += Math.sin(time * 1.3 + dot.swayPhase) * jitter;
-            fy += Math.cos(time * 1.5 + dot.swayPhase * 0.7) * jitter;
+          if (isSvgActive && lockActive) {
+            noiseAmp = 0;
+            damping = Math.min(0.995, damping * 1.08);
+            stiffness *= 2.35;
           }
 
-          if (dot.coordinatedPhase) {
-            const coordAmp = noiseAmp * 0.6;
-            fx += globalOscillatorX * coordAmp;
-            fy += globalOscillatorY * coordAmp;
+          let targetX = home.x;
+          let targetY = home.y;
 
-            const individualVariation = noiseAmp * 0.2;
-            const noise = generateNoise(
-              time * dot.noiseFreq * 0.5,
-              dot.seedA,
-              dot.seedB
-            );
-            fx += noise.x * individualVariation;
-            fy += noise.y * individualVariation;
-          } else {
-            const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
-            fx += noise.x * noiseAmp;
-            fy += noise.y * noiseAmp;
+          if (useTargetOffset) {
+            const rampT =
+              sceneSwayRampMs > 0
+                ? clamp01((timestamp - lockUntilRef.current) / sceneSwayRampMs)
+                : 1;
+            const settle =
+              sceneSettleRadiusPx > 0
+                ? (() => {
+                    const dist = Math.hypot(dx, dy);
+                    const t = clamp01(1 - dist / sceneSettleRadiusPx);
+                    return t * t;
+                  })()
+                : 1;
+            const ramp = rampT * rampT * (3 - 2 * rampT); // smoothstep
+            const swayAmp = lockActive ? 0 : noiseAmp * ramp * settle * 0.35;
+            if (swayAmp > 0) {
+              const oscX = Math.sin(time * 0.6 + dot.swayPhase * 0.3);
+              const oscY = Math.cos(time * 0.65 + dot.swayPhase * 0.5);
+              const noise = generateNoise(time * dot.noiseFreq, dot.seedA, dot.seedB);
+              const ox = (oscX + noise.x * 0.6) * swayAmp;
+              const oy = (oscY + noise.y * 0.6) * swayAmp;
+              targetX = home.x + ox;
+              targetY = home.y + oy;
+            }
+          }
+
+          const finalDx = targetX - dot.pos.x;
+          const finalDy = targetY - dot.pos.y;
+
+          if (
+            lockActive &&
+            sceneSnapRadiusPx > 0 &&
+            sceneSnapSpeedPxPerSec > 0
+          ) {
+            const dist = Math.hypot(finalDx, finalDy);
+            const speed = Math.hypot(dot.vel.x, dot.vel.y);
+            if (dist <= sceneSnapRadiusPx && speed <= sceneSnapSpeedPxPerSec) {
+              dot.pos.x = targetX;
+              dot.pos.y = targetY;
+              dot.vel.x = 0;
+              dot.vel.y = 0;
+              continue;
+            }
+          }
+
+          let fx = stiffness * finalDx;
+          let fy = stiffness * finalDy;
+
+          if (!useTargetOffset) {
+            if (modeNow === "scatter") {
+              const jitter = noiseAmp * jitterMult;
+              fx += Math.sin(time * 1.3 + dot.swayPhase) * jitter;
+              fy += Math.cos(time * 1.5 + dot.swayPhase * 0.7) * jitter;
+            }
+
+            if (dot.coordinatedPhase) {
+              const coordAmp = noiseAmp * 0.6;
+              fx += globalOscillatorX * coordAmp;
+              fy += globalOscillatorY * coordAmp;
+
+              const individualVariation = noiseAmp * 0.2;
+              const noise = generateNoise(
+                time * dot.noiseFreq * 0.5,
+                dot.seedA,
+                dot.seedB
+              );
+              fx += noise.x * individualVariation;
+              fy += noise.y * individualVariation;
+            } else {
+              const noise = generateNoise(
+                time * dot.noiseFreq,
+                dot.seedA,
+                dot.seedB
+              );
+              fx += noise.x * noiseAmp;
+              fy += noise.y * noiseAmp;
+            }
           }
 
           dot.vel.x = (dot.vel.x + fx * dt) * damping;
@@ -1342,6 +1462,15 @@ export default function DotsCanvas({
     const SWAY_FREQ = 0.35;
     const phase = phaseRef.current;
     const isBreathingOrScrolling = phase === "scrolling" || phase === "transition";
+    const activeSceneId = activeSceneIdRef.current;
+    const activeScene =
+      activeSceneId !== null ? scenesRef.current.get(activeSceneId) ?? null : null;
+    const isTargetOffsetSway = activeScene?.swayStyle === "targetOffset";
+    const lockActive =
+      activeSceneId !== null &&
+      activeSceneId === lockSceneIdRef.current &&
+      (activeScene?.lockInMs ?? 0) > 0 &&
+      performance.now() < lockUntilRef.current;
 
     let swayMultiplier = 1;
     if (phase === "initial") {
@@ -1379,25 +1508,36 @@ export default function DotsCanvas({
       let swayX: number;
       let swayY: number;
 
-      if (isBreathingOrScrolling && dot.coordinatedPhase) {
-        const globalPhase = time * 0.3;
-        swayX =
-          Math.sin(globalPhase + dot.swayPhase * 0.5) *
-          dot.swayAmp *
-          swayMultiplier;
-        swayY =
-          Math.cos(globalPhase + dot.swayPhase * 0.7) *
-          dot.swayAmp *
-          swayMultiplier;
+      const drawSwayAllowed =
+        !lockActive &&
+        (!isTargetOffsetSway ||
+          (activeScene?.settleRadiusPx ?? 0) === 0 ||
+          dist <= (activeScene?.settleRadiusPx ?? 0));
+
+      if (!isTargetOffsetSway && drawSwayAllowed) {
+        if (isBreathingOrScrolling && dot.coordinatedPhase) {
+          const globalPhase = time * 0.3;
+          swayX =
+            Math.sin(globalPhase + dot.swayPhase * 0.5) *
+            dot.swayAmp *
+            swayMultiplier;
+          swayY =
+            Math.cos(globalPhase + dot.swayPhase * 0.7) *
+            dot.swayAmp *
+            swayMultiplier;
+        } else {
+          swayX =
+            Math.sin(time * SWAY_FREQ + dot.swayPhase) *
+            dot.swayAmp *
+            swayMultiplier;
+          swayY =
+            Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) *
+            dot.swayAmp *
+            swayMultiplier;
+        }
       } else {
-        swayX =
-          Math.sin(time * SWAY_FREQ + dot.swayPhase) *
-          dot.swayAmp *
-          swayMultiplier;
-        swayY =
-          Math.cos(time * SWAY_FREQ + dot.swayPhase * 1.3) *
-          dot.swayAmp *
-          swayMultiplier;
+        swayX = 0;
+        swayY = 0;
       }
 
       const drawX = dot.pos.x + swayX;

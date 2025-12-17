@@ -24,7 +24,23 @@ interface DotsSceneProps {
   snapOnEnter?: boolean;
   /** Scale applied when fitting SVG points (not a CSS transform). Default: 1 */
   targetScale?: number;
-  /** 
+  /** Optional multiplier for morph speed when this scene is active. Default: 1 (no change) */
+  morphSpeedMult?: number;
+  /** Lock window duration (ms) to disable noise/jitter; default 0 (off) */
+  lockInMs?: number;
+  /** Lock window duration to force home snapping (ms); default 0 (off) */
+  homeSnapMs?: number;
+  /** Ramp-in duration for sway after lock ends; default 0 (off) */
+  swayRampMs?: number;
+  /** Sway style; default is current force-based behavior */
+  swayStyle?: "force" | "targetOffset";
+  /** Distance at which sway starts turning on (target-offset mode); default 0 disables gating */
+  settleRadiusPx?: number;
+  /** Radius for snap-to-home during lock; default 0 disables */
+  snapRadiusPx?: number;
+  /** Speed threshold for snap-to-home during lock; default 0 disables */
+  snapSpeedPxPerSec?: number;
+  /**
    * Scroll offset from the element's top where morphing to this SVG begins.
    * Can be negative to start before the element enters viewport.
    * Default: 0 (starts when element top reaches viewport top)
@@ -66,6 +82,14 @@ export default function DotsScene({
   maxSpeedMult = 1,
   snapOnEnter = false,
   targetScale = 1,
+  morphSpeedMult = 1,
+  lockInMs = 0,
+  homeSnapMs = 0,
+  swayRampMs = 0,
+  swayStyle = "force",
+  settleRadiusPx = 0,
+  snapRadiusPx = 0,
+  snapSpeedPxPerSec = 0,
   scrollStartOffset = 0,
   children,
   className,
@@ -160,6 +184,14 @@ export default function DotsScene({
         maxSpeedMult,
         snapOnEnter,
         targetScale,
+        morphSpeedMult,
+        lockInMs,
+        homeSnapMs,
+        swayRampMs,
+        swayStyle,
+        settleRadiusPx,
+        snapRadiusPx,
+        snapSpeedPxPerSec,
       });
     };
 
@@ -234,9 +266,16 @@ export default function DotsScene({
     registerScene,
     scrollStartOffset,
     snapOnEnter,
+    morphSpeedMult,
+    settleRadiusPx,
+    snapRadiusPx,
+    snapSpeedPxPerSec,
     stiffnessMult,
+    swayRampMs,
+    swayStyle,
     svgUrl,
     targetScale,
+    homeSnapMs,
     unregisterScene,
   ]);
 

@@ -16,39 +16,44 @@ interface Step {
 const steps: Step[] = [
   {
     svgUrl: "/assets/day_in_the_life/file-1.svg",
-    title: "Morning begins",
-    body: "The day starts with intention, setting the foundation for what's to come.",
+    title: "Wake Calmly",
+    body: "Gentle haptics wake you smoothly, so you start the day steady instead of startled.",
   },
   {
-    svgUrl: "/assets/day_in_the_life/file-2.svg",
-    title: "Finding focus",
-    body: "As the hours unfold, clarity emerges from the morning's calm.",
-  },
-  {
-    svgUrl: "/assets/day_in_the_life/file-3.svg",
-    title: "Building momentum",
-    body: "Energy flows naturally, carrying you through the day's rhythm.",
+    svgUrl: "/assets/day_in_the_life/file-1.svg",
+    title: "Start Energized",
+    body: "Morning haptics lift your energy while distractions stay blocked, helping you avoid reflexive scrolling.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-4.svg",
-    title: "Peak performance",
-    body: "At the height of the day, everything aligns in perfect harmony.",
+    title: "Arrive at Work Centered",
+    body: "When stress rises, calming patterns stabilize your body so you stay clear and productive.",
+  },
+  {
+    svgUrl: "/assets/day_in_the_life/file-3.svg",
+    title: "Maintain Focus",
+    body: "As attention dips, energizing haptics restore focus and prevent the midday slump.",
+  },
+  {
+    svgUrl: "/assets/day_in_the_life/file-4.svg",
+    title: "Drive Safely",
+    body: "Balanced haptics keep arousal in check so you stay alert and avoid end-of-day fatigue on the road.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-5.svg",
-    title: "Sustained balance",
-    body: "The steady pace continues, maintaining equilibrium throughout.",
+    title: "Play or Work Intentionally",
+    body: "Your state is inferred automatically, delivering energy when you want to engage and guardrails when you want discipline.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-6.svg",
-    title: "Evening transition",
-    body: "The day begins to wind down, preparing for rest and renewal.",
+    title: "Wind Down Naturally",
+    body: "Calming patterns ease your body into rest while impulse-driven apps stay out of reach.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-7.svg",
-    title: "Peaceful conclusion",
-    body: "The day ends with a sense of completion and quiet satisfaction.",
-  },
+    title: "Sleep Deeply",
+    body: "Haptics calm your nervous system, helping you fall asleep and recover more effectively.",
+  }
 ];
 
 function CrossfadeText({
@@ -255,6 +260,11 @@ export default function Day() {
 
   const currentStep = steps[activeIndex];
   const svgScale = isDesktop ? 1.5 : 1.0;
+  const lockInMs = isDesktop ? 350 : 250;
+  const swayRampMs = isDesktop ? 900 : 700;
+  const settleRadiusPx = isDesktop ? 60 : 45;
+  const snapRadiusPx = isDesktop ? 2.5 : 2.0;
+  const snapSpeedPxPerSec = isDesktop ? 40 : 35;
 
   return (
     <section ref={sectionRef} className="relative grid h-[800vh]">
@@ -268,6 +278,12 @@ export default function Day() {
           maxSpeedMult={1.5}
           snapOnEnter
           targetScale={svgScale}
+          lockInMs={lockInMs}
+          swayRampMs={swayRampMs}
+          swayStyle="targetOffset"
+          settleRadiusPx={settleRadiusPx}
+          snapRadiusPx={snapRadiusPx}
+          snapSpeedPxPerSec={snapSpeedPxPerSec}
         />
       </div>
 
