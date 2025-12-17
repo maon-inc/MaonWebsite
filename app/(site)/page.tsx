@@ -16,7 +16,7 @@ const useIsomorphicLayoutEffect =
 export default function HomePage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [dotCount, setDotCount] = useState(1200);
+  const [dotCount, setDotCount] = useState(100);
   const setScrollEl = useCallback((node: HTMLDivElement | null) => {
     scrollContainerRef.current = node;
     setScrollContainer(node);
@@ -35,7 +35,7 @@ export default function HomePage() {
       setIsMobile(mobile);
 
       const isLowPower = getPrefersReducedMotion() || mobile || getSaveData();
-      setDotCount(isLowPower ? 700 : 1200);
+      setDotCount(isLowPower ? 700 : 1000);
     };
 
     recompute();

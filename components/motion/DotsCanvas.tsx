@@ -180,6 +180,7 @@ function calculateTargetOffset(
   let offsetX = 0;
   let offsetY = 0;
 
+  // Horizontal
   if (anchor.includes("left")) {
     offsetX = 0;
   } else if (anchor.includes("right")) {
@@ -188,8 +189,14 @@ function calculateTargetOffset(
     offsetX = (canvasWidth - targetWidth) / 2;
   }
 
-  if (anchor.includes("top")) {
-    offsetY = anchor === "top-center" ? canvasHeight * 0.1 : 0;
+  // Vertical
+  if (anchor === "top-center") {
+    // Center in upper portion, leaving room for bottom text
+    const upperRegion = canvasHeight * 0.55;
+    offsetY = (upperRegion - targetHeight) / 2;
+    offsetY = Math.max(30, offsetY);
+  } else if (anchor.includes("top")) {
+    offsetY = 0;
   } else if (anchor.includes("bottom")) {
     offsetY = canvasHeight - targetHeight;
   } else {
@@ -1349,6 +1356,18 @@ export default function DotsCanvas({
         } else {
           const dx = home.x - dot.pos.x;
           const dy = home.y - dot.pos.y;
+
+          const dist2 = dx * dx + dy * dy;
+          const vel2 = dot.vel.x * dot.vel.x + dot.vel.y * dot.vel.y;
+
+          // Hard snap when close and slow - eliminates asymptotic crawl
+          if (dist2 <= 6.25 && vel2 <= 2500) { // 2.5px distance, 50px/s velocity
+            dot.pos.x = home.x;
+            dot.pos.y = home.y;
+            dot.vel.x = 0;
+            dot.vel.y = 0;
+            continue;
+          }
 
           // Higher stiffness for faster snapping during scroll
           let stiffness =

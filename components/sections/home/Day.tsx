@@ -65,6 +65,8 @@ const steps: Step[] = [
   }
 ];
 
+const svgUrls = steps.map(s => s.svgUrl);
+
 function CrossfadeText({
   steps,
   activeIndex,
@@ -145,6 +147,17 @@ export default function Day() {
   const sectionRef = useRef<HTMLElement>(null);
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
+
+  useEffect(() => {
+    // Preload all SVGs on mount
+    svgUrls.forEach(url => {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      link.as = 'fetch';
+      document.head.appendChild(link);
+    });
+  }, []);
 
   useEffect(() => {
     const mql = window.matchMedia
