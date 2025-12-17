@@ -25,12 +25,12 @@ const steps: Step[] = [
     svgUrl: "/assets/day_in_the_life/file-2.svg",
     iconUrl: "/assets/day_time_svg/2.svg",
     title: "Start Energized",
-    body: "Morning haptics lift your energy while distractions stay blocked, helping you avoid reflexive scrolling.",
+    body: "Morning haptics lift your energy while distractions stay blocked, helping you avoid doomscrolling.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-3.svg",
     iconUrl: "/assets/day_time_svg/3.svg",
-    title: "Arrive at Work Centered",
+    title: "Arrive Work-Ready",
     body: "When stress rises, calming patterns stabilize your body so you stay clear and productive.",
   },
   {
@@ -48,13 +48,13 @@ const steps: Step[] = [
   {
     svgUrl: "/assets/day_in_the_life/file-5.svg",
     iconUrl: "/assets/day_time_svg/6.svg",
-    title: "Play or Work Intentionally",
+    title: "Play Intentionally",
     body: "Your state is inferred automatically, keeping you locked in for work or free to unwind.",
   },
   {
     svgUrl: "/assets/day_in_the_life/file-6.svg",
     iconUrl: "/assets/day_time_svg/7.svg",
-    title: "Wind Down Naturally",
+    title: "Relax Naturally",
     body: "Calming patterns ease your body into rest while impulse-driven apps stay out of reach.",
   },
   {
@@ -71,10 +71,14 @@ function CrossfadeText({
   steps,
   activeIndex,
   isDesktop,
+  onPrev,
+  onNext,
 }: {
   steps: Step[];
   activeIndex: number;
   isDesktop: boolean;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
   const [displayIndex, setDisplayIndex] = useState(activeIndex);
   const [opacity, setOpacity] = useState(1);
@@ -144,6 +148,25 @@ function CrossfadeText({
         >
           {step.body}
         </p>
+        {/* Navigation buttons */}
+        <div className="flex items-center justify-center gap-6 mt-6">
+          <button 
+            onClick={onPrev}
+            className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
+            disabled={activeIndex === 0}
+            aria-label="Previous step"
+          >
+            <img src="/assets/ui/backward.svg" alt="" width={14} height={18} />
+          </button>
+          <button 
+            onClick={onNext}
+            className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
+            disabled={activeIndex === steps.length - 1}
+            aria-label="Next step"
+          >
+            <img src="/assets/ui/forward.svg" alt="" width={14} height={18} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -181,6 +204,25 @@ function CrossfadeText({
       >
         {step.body}
       </p>
+      {/* Navigation buttons */}
+      <div className="flex items-center gap-6 mt-6">
+        <button 
+          onClick={onPrev}
+          className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
+          disabled={activeIndex === 0}
+          aria-label="Previous step"
+        >
+          <img src="/assets/ui/backward.svg" alt="" width={20} height={26} />
+        </button>
+        <button 
+          onClick={onNext}
+          className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
+          disabled={activeIndex === steps.length - 1}
+          aria-label="Next step"
+        >
+          <img src="/assets/ui/forward.svg" alt="" width={20} height={26} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -434,7 +476,7 @@ export default function Day() {
       {/* Content in sticky container */}
       <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-start justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
         {/* Text box - fixed position on mobile, positioned above the icon */}
-        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[54vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[53vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
           {/* Progress fill */}
           <div 
             className="absolute inset-0 rounded-[10px]" 
@@ -464,6 +506,36 @@ export default function Day() {
             steps={steps}
             activeIndex={activeIndex}
             isDesktop={isDesktop}
+            onPrev={() => {
+              if (activeIndex > 0) {
+                const newIndex = activeIndex - 1;
+                const scrollContainer = getScrollContainer();
+                if (scrollContainer) {
+                  const viewportH = scrollContainer.clientHeight;
+                  const scrollStart = sectionTopRef.current;
+                  const scrollRange = sectionHeightRef.current - viewportH;
+                  // Calculate target scroll position (center of the step)
+                  const targetProgress = (newIndex + 0.5) / steps.length;
+                  const targetScrollY = scrollStart + (targetProgress * scrollRange);
+                  scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
+                }
+              }
+            }}
+            onNext={() => {
+              if (activeIndex < steps.length - 1) {
+                const newIndex = activeIndex + 1;
+                const scrollContainer = getScrollContainer();
+                if (scrollContainer) {
+                  const viewportH = scrollContainer.clientHeight;
+                  const scrollStart = sectionTopRef.current;
+                  const scrollRange = sectionHeightRef.current - viewportH;
+                  // Calculate target scroll position (center of the step)
+                  const targetProgress = (newIndex + 0.5) / steps.length;
+                  const targetScrollY = scrollStart + (targetProgress * scrollRange);
+                  scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
+                }
+              }
+            }}
           />
         </div>
       </div>

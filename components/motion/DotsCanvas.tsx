@@ -12,9 +12,10 @@ import React, {
 } from "react";
 import {
   getCachedFittedSvgPoints,
+  clearSvgCaches,
   type Point,
 } from "@/lib/motion/svgSample";
-import { subscribe } from "@/motion/engine";
+import { subscribe, reset as resetEngine } from "@/motion/engine";
 import { clamp01, lerp } from "@/motion/math";
 import { observeResize } from "@/motion/observe";
 import {
@@ -1777,6 +1778,23 @@ export default function DotsCanvas({
     lastTimeRef.current = null;
     needsReinitRef.current = false;
   }, [canvasSize, count, initializeDots]);
+
+  // -------------------------------------------------------------------------
+  // Cleanup on Unmount
+  // -------------------------------------------------------------------------
+  // Clean up module-level caches and global state when DotsCanvas unmounts
+  // to prevent memory leaks across Next.js soft navigations.
+
+  useEffect(() => {
+    return () => {
+      // Clear SVG parsing and fitted points caches (removes DOM elements from body)
+      clearSvgCaches();
+      // Reset engine state (stops RAF loop, clears subscribers, resets scroll container)
+      resetEngine();
+      // Clear the global retarget functions set
+      mountedCanvasInstances.clear();
+    };
+  }, []);
 
   // -------------------------------------------------------------------------
   // Render
