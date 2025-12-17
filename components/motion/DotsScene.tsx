@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useId } from "react";
+import { useEffect, useMemo, useRef, useId, useCallback } from "react";
 import { useDotsCanvas, type DotTargetProvider } from "./DotsCanvas";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
@@ -290,9 +290,14 @@ export default function DotsScene({
     unregisterScene,
   ]);
 
+  // Use callback ref to handle polymorphic component type safely
+  const setRef = useCallback((el: HTMLDivElement | HTMLElement | null) => {
+    (elementRef as React.MutableRefObject<HTMLElement | null>).current = el;
+  }, []);
+
   return (
     <Component
-      ref={elementRef as React.RefObject<HTMLDivElement>}
+      ref={setRef}
       className={className}
       data-dots-scene={id}
     >

@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import {
@@ -138,16 +139,19 @@ type RetargetOpts = {
   maxSpeedMult?: number;
 };
 
-let imperativeRetargetToSvg:
-  | ((svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => void)
-  | null = null;
+// Track all mounted DotsCanvas instances for proper multi-instance support
+type RetargetFn = (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => void;
+const mountedCanvasInstances = new Set<RetargetFn>();
 
 export function retargetToSvg(
   svgUrl: string,
   mode: RetargetMode = "soft",
   opts?: RetargetOpts
 ): void {
-  imperativeRetargetToSvg?.(svgUrl, mode, opts);
+  // Call retarget on all mounted instances (typically just one)
+  for (const fn of mountedCanvasInstances) {
+    fn(svgUrl, mode, opts);
+  }
 }
 
 // ============================================================================
@@ -1156,14 +1160,12 @@ export default function DotsCanvas({
   );
 
   useEffect(() => {
-    const fn = (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => {
+    const fn: RetargetFn = (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => {
       retargetToSvgInternal(svgUrl, mode, opts);
     };
-    imperativeRetargetToSvg = fn;
+    mountedCanvasInstances.add(fn);
     return () => {
-      if (imperativeRetargetToSvg === fn) {
-        imperativeRetargetToSvg = null;
-      }
+      mountedCanvasInstances.delete(fn);
     };
   }, [retargetToSvgInternal]);
 
@@ -1773,12 +1775,15 @@ export default function DotsCanvas({
   // Render
   // -------------------------------------------------------------------------
 
-  const contextValue: DotsCanvasContextValue = {
-    registerScene,
-    unregisterScene,
-    canvasWidth: canvasSize.width,
-    canvasHeight: canvasSize.height,
-  };
+  const contextValue = useMemo<DotsCanvasContextValue>(
+    () => ({
+      registerScene,
+      unregisterScene,
+      canvasWidth: canvasSize.width,
+      canvasHeight: canvasSize.height,
+    }),
+    [registerScene, unregisterScene, canvasSize.width, canvasSize.height]
+  );
 
   return (
     <DotsCanvasContext.Provider value={contextValue}>

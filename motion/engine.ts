@@ -103,4 +103,23 @@ export function subscribe(subscriber: Subscriber): () => void {
   };
 }
 
+/**
+ * Reset all engine state. Call this on page navigation to prevent
+ * stale state from persisting across Next.js soft navigations.
+ */
+export function reset(): void {
+  stop();
+  state.scrollY = 0;
+  state.viewportH = 0;
+  state.viewportW = 0;
+  state.time = 0;
+  state.velocity = undefined;
+  subscribers.clear();
+  accumulatedTime = 0;
+  previousScrollY = 0;
+  previousTime = 0;
+  customScrollSource = null;
+  scrollContainerEl = null;
+}
+
 export { start, stop };

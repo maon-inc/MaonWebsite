@@ -20,7 +20,9 @@ export default function HeroText() {
   useEffect(() => {
     const unsubscribe = subscribe((state) => {
       // Hide when scrolled more than 50px
-      setIsScrolled(state.scrollY > 50);
+      // Only update state if the boolean value actually changes
+      const shouldBeScrolled = state.scrollY > 50;
+      setIsScrolled((prev) => (prev !== shouldBeScrolled ? shouldBeScrolled : prev));
     });
 
     return unsubscribe;
@@ -30,10 +32,10 @@ export default function HeroText() {
     <>
       {/* Desktop version */}
       <div className="hidden md:block absolute bottom-20 left-16 max-w-[600px] z-20">
-      <h1 className="text-d-merriweather-48-bold mb-4 text-[#171717]">
+      <h1 className="text-d-merriweather-48-bold mb-4 text-[var(--text-primary)]">
         AI ring to superpower your nervous system.
       </h1>
-      <p className="text-d-lato-20-regular text-[#171717]">
+      <p className="text-d-lato-20-regular text-[var(--text-primary)]">
         Built to make you balanced without the effort.
       </p>
     </div>
@@ -44,15 +46,15 @@ export default function HeroText() {
           isVisible && !isScrolled ? "opacity-100" : "opacity-0"
         }`}
       >
-        <h1 className="text-d-merriweather-24-bold mb-3 text-[#171717]">
+        <h1 className="text-d-merriweather-24-bold mb-3 text-[var(--text-primary)]">
           AI ring to superpower your nervous system.
         </h1>
-        <p className="text-d-lato-20-regular text-[#171717] mb-6">
+        <p className="text-d-lato-20-regular text-[var(--text-primary)] mb-6">
           Built to make you balanced without the effort.
         </p>
         <Link
           href="/preorder"
-          className="inline-flex items-center justify-center gap-2 w-[208px] text-d-lato-20-regular text-[#171717] border border-[#171717] rounded-[9.03px] py-3 transition-opacity hover:opacity-70"
+          className="inline-flex items-center justify-center gap-2 w-[208px] text-d-lato-20-regular text-[var(--text-primary)] border border-[var(--text-primary)] rounded-[9.03px] py-3 transition-opacity hover:opacity-70"
           style={{ borderWidth: "0.9px" }}
         >
           Join the waitlist

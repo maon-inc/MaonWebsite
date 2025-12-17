@@ -39,8 +39,10 @@ export default function Problem() {
       const scrollRange = scrollEnd - scrollStart;
 
       if (scrollRange <= 0) {
-        lastProgressRef.current = 0;
-        setProgress(0);
+        if (lastProgressRef.current !== 0) {
+          lastProgressRef.current = 0;
+          setProgress(0);
+        }
         return;
       }
 
@@ -48,11 +50,13 @@ export default function Problem() {
       const clampedProgress = Math.max(0, Math.min(1, rawProgress));
 
       const last = lastProgressRef.current;
-      if (
-        clampedProgress === 0 ||
-        clampedProgress === 1 ||
-        Math.abs(clampedProgress - last) > 0.01
-      ) {
+      // Only update state if progress has meaningfully changed
+      // Use a slightly larger threshold to reduce re-renders
+      const hasReachedBoundary = (clampedProgress === 0 && last !== 0) || 
+                                  (clampedProgress === 1 && last !== 1);
+      const hasSignificantChange = Math.abs(clampedProgress - last) > 0.01;
+      
+      if (hasReachedBoundary || hasSignificantChange) {
         lastProgressRef.current = clampedProgress;
         setProgress(clampedProgress);
       }
@@ -82,15 +86,15 @@ export default function Problem() {
     >
       <div className="text-left max-w-[600px] md:max-w-[700px] lg:max-w-[800px]">
         <p
-          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6"
-          style={{ color: `rgba(23, 23, 23, ${fadeOutOpacity})` }}
+          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6 text-[var(--text-primary)]"
+          style={{ opacity: fadeOutOpacity }}
         >
           10 minutes. That is how often your nervous system is interrupted. And
           because of that, stress accumulates and balance slips away.
         </p>
         <p
-          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular"
-          style={{ color: `rgba(23, 23, 23, ${fadeInOpacity})` }}
+          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular text-[var(--text-primary)]"
+          style={{ opacity: fadeInOpacity }}
         >
           It is time to restore balance.
         </p>

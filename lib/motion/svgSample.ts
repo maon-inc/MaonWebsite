@@ -3,6 +3,8 @@
  * Parse SVG text and sample points from paths
  */
 
+import { hashStringToSeed, makeMulberry32 } from "./random";
+
 export interface ViewBox {
   x: number;
   y: number;
@@ -20,26 +22,6 @@ export interface ParseResult {
   paths: SVGPathElement[];
   viewBox: ViewBox;
   cleanup: () => void;
-}
-
-function hashStringToSeed(str: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function makeMulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 export function parseSvgPaths(svgText: string): ParseResult {
@@ -286,6 +268,27 @@ const parsedSvgCache = new Map<string, Promise<ParsedSvgEntry>>();
 const fittedPointsCache = new Map<string, Promise<Point[]>>();
 const MAX_PARSED_SVGS = 32;
 const parsedSvgEvictionQueue: string[] = [];
+
+/**
+ * Cleanup all cached SVG DOM elements and clear caches.
+ * Call this on page navigation or component unmount to prevent memory leaks.
+ */
+export function clearSvgCaches(): void {
+  // Clean up all DOM containers
+  for (const promise of parsedSvgCache.values()) {
+    promise
+      .then((entry) => {
+        if (entry.container.parentNode) {
+          entry.container.parentNode.removeChild(entry.container);
+        }
+      })
+      .catch(() => undefined);
+  }
+  
+  parsedSvgCache.clear();
+  fittedPointsCache.clear();
+  parsedSvgEvictionQueue.length = 0;
+}
 
 async function getParsedSvgForUrl(svgUrl: string): Promise<ParsedSvgEntry> {
   const cached = parsedSvgCache.get(svgUrl);

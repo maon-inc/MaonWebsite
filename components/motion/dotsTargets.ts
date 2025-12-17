@@ -1,26 +1,10 @@
 "use client";
 
 import type { Point } from "@/lib/motion/svgSample";
+import { hashStringToSeed, makeMulberry32 } from "@/lib/motion/random";
 
-export function hashStringToSeed(str: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-export function makeMulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// Re-export for backwards compatibility with existing imports
+export { hashStringToSeed, makeMulberry32 };
 
 export function generateScatterTargets(
   sceneId: string,
