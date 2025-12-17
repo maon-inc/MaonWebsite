@@ -4,6 +4,8 @@ import { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react
 import HeroText from "@/components/sections/home/HeroText";
 import Nav from "@/components/site/Nav";
 import Problem from "@/components/sections/home/Problem";
+import Intro from "@/components/sections/home/Intro";
+import Day from "@/components/sections/home/Day";
 import DotsCanvas from "@/components/motion/DotsCanvas";
 import DotsScene from "@/components/motion/DotsScene";
 import { setScrollContainer } from "@/motion/engine";
@@ -97,16 +99,20 @@ export default function HomePage() {
               <HeroText />
             </DotsScene>
 
-            <section className="relative grid h-[250vh]">
+            <section className="relative grid h-[300vh]">
               <div className="pointer-events-none col-start-1 row-start-1">
                 <DotsScene scatter className="h-[100vh]" />
-                <DotsScene dissipate className="h-[50vh]" />
+                <DotsScene dissipate className="h-[100vh]" />
               </div>
 
               <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
                 <Problem />
               </div>
             </section>
+
+            <Intro />
+
+            <Day />
           </div>
 
           {/* Right column: Fixed Nav (doesn't scroll) - hidden on mobile */}

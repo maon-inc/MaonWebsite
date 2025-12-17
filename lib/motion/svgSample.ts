@@ -22,6 +22,26 @@ export interface ParseResult {
   cleanup: () => void;
 }
 
+function hashStringToSeed(str: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function makeMulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function parseSvgPaths(svgText: string): ParseResult {
   const container = document.createElement("div");
   container.innerHTML = svgText;
@@ -59,7 +79,8 @@ export function parseSvgPaths(svgText: string): ParseResult {
 
 export function samplePointsFromPaths(
   paths: SVGPathElement[],
-  count: number
+  count: number,
+  rng: () => number = Math.random
 ): Point[] {
   if (paths.length === 0) return [];
 
@@ -119,7 +140,7 @@ export function samplePointsFromPaths(
     const segmentSize = usableLength / pathCount;
     for (let j = 0; j < pathCount; j++) {
       const segmentStart = margin + j * segmentSize;
-      const jitter = (Math.random() - 0.5) * segmentSize * 0.8; // 80% jitter within segment
+      const jitter = (rng() - 0.5) * segmentSize * 0.8; // 80% jitter within segment
       const length = segmentStart + segmentSize * 0.5 + jitter;
       
       try {
@@ -138,7 +159,8 @@ export async function samplePointsInFillFromPaths(
   paths: SVGPathElement[],
   viewBox: ViewBox,
   count: number,
-  svgElement: SVGSVGElement
+  svgElement: SVGSVGElement,
+  rng: () => number = Math.random
 ): Promise<Point[]> {
   if (paths.length === 0) return [];
 
@@ -202,7 +224,7 @@ export async function samplePointsInFillFromPaths(
     
     // Fisher-Yates shuffle
     for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
     }
 
@@ -251,4 +273,162 @@ export function fitPointsToRect(
     x: (point.x - viewBox.x) * scale + offsetX,
     y: (point.y - viewBox.y) * scale + offsetY,
   }));
+}
+
+type ParsedSvgEntry = {
+  svg: SVGSVGElement;
+  paths: SVGPathElement[];
+  viewBox: ViewBox;
+  container: HTMLDivElement;
+};
+
+const parsedSvgCache = new Map<string, Promise<ParsedSvgEntry>>();
+const fittedPointsCache = new Map<string, Promise<Point[]>>();
+const MAX_PARSED_SVGS = 32;
+const parsedSvgEvictionQueue: string[] = [];
+
+async function getParsedSvgForUrl(svgUrl: string): Promise<ParsedSvgEntry> {
+  const cached = parsedSvgCache.get(svgUrl);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    const response = await fetch(svgUrl);
+    if (!response.ok) throw new Error(`Failed to fetch SVG: ${svgUrl}`);
+    const svgText = await response.text();
+
+    const container = document.createElement("div");
+    container.innerHTML = svgText;
+    container.style.position = "absolute";
+    container.style.visibility = "hidden";
+    container.style.pointerEvents = "none";
+    container.style.left = "-99999px";
+    container.style.top = "-99999px";
+    document.body.appendChild(container);
+
+    const svg = container.querySelector("svg");
+    if (!svg) {
+      document.body.removeChild(container);
+      throw new Error("No <svg> element found in SVG text");
+    }
+
+    const paths = Array.from(svg.querySelectorAll("path"));
+
+    let viewBox: ViewBox;
+    if (svg.viewBox && svg.viewBox.baseVal) {
+      const vb = svg.viewBox.baseVal;
+      viewBox = { x: vb.x, y: vb.y, w: vb.width, h: vb.height };
+    } else {
+      const width = parseFloat(svg.getAttribute("width") || "100");
+      const height = parseFloat(svg.getAttribute("height") || "100");
+      viewBox = { x: 0, y: 0, w: width, h: height };
+    }
+
+    return { svg, paths, viewBox, container };
+  })();
+
+  parsedSvgCache.set(svgUrl, promise);
+  parsedSvgEvictionQueue.push(svgUrl);
+
+  if (parsedSvgEvictionQueue.length > MAX_PARSED_SVGS) {
+    const evictUrl = parsedSvgEvictionQueue.shift();
+    if (evictUrl) {
+      parsedSvgCache
+        .get(evictUrl)
+        ?.then((entry) => {
+          if (entry.container.parentNode) {
+            entry.container.parentNode.removeChild(entry.container);
+          }
+        })
+        .catch(() => undefined);
+      parsedSvgCache.delete(evictUrl);
+      for (const key of fittedPointsCache.keys()) {
+        if (key.startsWith(`${evictUrl}|`)) {
+          fittedPointsCache.delete(key);
+        }
+      }
+    }
+  }
+
+  return promise;
+}
+
+export type CachedSvgPointsParams = {
+  svgUrl: string;
+  count: number;
+  fitWidth: number;
+  fitHeight: number;
+  paddingPx: number;
+  offsetX: number;
+  offsetY: number;
+  outlineRatio?: number;
+};
+
+export async function getCachedFittedSvgPoints(
+  params: CachedSvgPointsParams
+): Promise<Point[]> {
+  const outlineRatio = params.outlineRatio ?? 0.85;
+  const key = [
+    params.svgUrl,
+    `count:${params.count}`,
+    `fit:${params.fitWidth}x${params.fitHeight}`,
+    `pad:${params.paddingPx}`,
+    `off:${Math.round(params.offsetX)}x${Math.round(params.offsetY)}`,
+    `outline:${outlineRatio}`,
+  ].join("|");
+
+  const cached = fittedPointsCache.get(key);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    const { svg, paths, viewBox } = await getParsedSvgForUrl(params.svgUrl);
+    if (paths.length === 0) throw new Error("No paths found in SVG");
+
+    const rng = makeMulberry32(hashStringToSeed(key));
+
+    const outlineCount = Math.floor(params.count * outlineRatio);
+    const interiorCount = params.count - outlineCount;
+
+    const outlinePoints = samplePointsFromPaths(paths, outlineCount, rng);
+    if (outlinePoints.length === 0) {
+      throw new Error("Failed to sample outline points");
+    }
+
+    let interiorPoints: Point[] = [];
+    try {
+      interiorPoints = await samplePointsInFillFromPaths(
+        paths,
+        viewBox,
+        interiorCount,
+        svg,
+        rng
+      );
+      if (interiorPoints.length < interiorCount) {
+        const additionalOutline = samplePointsFromPaths(
+          paths,
+          interiorCount - interiorPoints.length,
+          rng
+        );
+        interiorPoints = interiorPoints.concat(additionalOutline);
+      }
+    } catch {
+      interiorPoints = samplePointsFromPaths(paths, interiorCount, rng);
+    }
+
+    const sampledPoints = outlinePoints.concat(interiorPoints);
+    const fittedPoints = fitPointsToRect(
+      sampledPoints,
+      viewBox,
+      params.fitWidth,
+      params.fitHeight,
+      params.paddingPx
+    );
+
+    return fittedPoints.map((p) => ({
+      x: p.x + params.offsetX,
+      y: p.y + params.offsetY,
+    }));
+  })();
+
+  fittedPointsCache.set(key, promise);
+  return promise;
 }

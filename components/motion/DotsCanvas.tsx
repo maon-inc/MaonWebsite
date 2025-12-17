@@ -10,10 +10,7 @@ import React, {
   type ReactNode,
 } from "react";
 import {
-  parseSvgPaths,
-  samplePointsFromPaths,
-  samplePointsInFillFromPaths,
-  fitPointsToRect,
+  getCachedFittedSvgPoints,
   type Point,
 } from "@/lib/motion/svgSample";
 import { subscribe } from "@/motion/engine";
@@ -35,10 +32,18 @@ interface SceneConfig {
   svgUrl?: string;
   providerKey: string;
   provider: DotTargetProvider;
+  order: number;
+  stiffnessMult: number;
+  dampingMult: number;
+  maxSpeedMult: number;
+  snapOnEnter: boolean;
+  targetScale: number;
 }
 
+type SceneConfigInput = Omit<SceneConfig, "order">;
+
 interface DotsCanvasContextValue {
-  registerScene: (config: SceneConfig) => void;
+  registerScene: (config: SceneConfigInput) => void;
   unregisterScene: (id: string) => void;
   canvasWidth: number;
   canvasHeight: number;
@@ -112,6 +117,27 @@ export function useDotsCanvas() {
     throw new Error("useDotsCanvas must be used within a DotsCanvas");
   }
   return ctx;
+}
+
+type RetargetMode = "soft" | "snap";
+
+type RetargetOpts = {
+  burstMs?: number;
+  stiffnessMult?: number;
+  dampingMult?: number;
+  maxSpeedMult?: number;
+};
+
+let imperativeRetargetToSvg:
+  | ((svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => void)
+  | null = null;
+
+export function retargetToSvg(
+  svgUrl: string,
+  mode: RetargetMode = "soft",
+  opts?: RetargetOpts
+): void {
+  imperativeRetargetToSvg?.(svgUrl, mode, opts);
 }
 
 // ============================================================================
@@ -222,6 +248,8 @@ const MODE_PARAMS: Record<
 };
 
 const MODE_TRANSITION_MS = 450;
+const BASE_MAX_SPEED_PX_PER_S = 1600;
+const SNAP_ON_ENTER_BURST_MS = 200;
 
 // ============================================================================
 // DotsCanvas Component
@@ -254,6 +282,8 @@ export default function DotsCanvas({
     new Map()
   );
   const sortedScenesRef = useRef<SceneConfig[]>([]);
+  const sceneOrderCounterRef = useRef(0);
+  const sceneOrderRef = useRef<Map<string, number>>(new Map());
   const currentHomeRef = useRef<Point[]>([]);
   const lastTimeRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
@@ -261,6 +291,7 @@ export default function DotsCanvas({
   const initialProgressRef = useRef<number>(0);
   const transitionProgressRef = useRef<number>(0);
   const timeRef = useRef<number>(0);
+  const engineTimeMsRef = useRef<number>(0);
   const scrollYRef = useRef<number>(0);
   const prefersReducedMotionRef = useRef(false);
   const activeModeRef = useRef<DotTargetProvider["mode"]>("svg");
@@ -272,6 +303,22 @@ export default function DotsCanvas({
     to: DotTargetProvider["mode"];
     startTimeMs: number;
   } | null>(null);
+  const retargetBoostUntilRef = useRef<number>(0);
+  const retargetBoostFactorRef = useRef<number>(1);
+  const forceHomeSnapUntilRef = useRef<number>(0);
+  const burstUntilRef = useRef<number>(0);
+  const burstSceneIdRef = useRef<string | null>(null);
+  const burstStiffnessMultRef = useRef<number>(1);
+  const burstDampingMultRef = useRef<number>(1);
+  const burstMaxSpeedMultRef = useRef<number>(1);
+  const pendingRetargetRef = useRef<{ svgUrl: string; mode: RetargetMode } | null>(
+    null
+  );
+  const pendingResizeSnapRef = useRef(false);
+  const targetsLoadSeqRef = useRef(0);
+  const targetsLoadingRef = useRef(false);
+  const lastActiveControllerIdRef = useRef<string | null>(null);
+  const lastActiveProviderKeyRef = useRef<string | null>(null);
 
   // Pre-parse colors
   const grayRgbRef = useRef(hexToRgb(colorGray));
@@ -279,7 +326,6 @@ export default function DotsCanvas({
 
   // State
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [scenesLoaded, setScenesLoaded] = useState(false);
   const [scenesVersion, setScenesVersion] = useState(0);
 
   // Update colors when props change
@@ -319,115 +365,75 @@ export default function DotsCanvas({
   }, []);
 
   // -------------------------------------------------------------------------
-  // SVG Loading
+  // SVG Targets (cached parse + sample + fit)
   // -------------------------------------------------------------------------
 
-  const loadSvgPoints = useCallback(
+  const getSvgTargets = useCallback(
     async (
       svgUrl: string,
       canvasWidth: number,
       canvasHeight: number,
-      dotCount: number
+      dotCount: number,
+      targetScale: number = 1
     ): Promise<Point[]> => {
+      const fitW = targetWidth * targetScale;
+      const fitH = targetHeight * targetScale;
       const { offsetX, offsetY } = calculateTargetOffset(
         canvasWidth,
         canvasHeight,
-        targetWidth,
-        targetHeight,
+        fitW,
+        fitH,
         targetAnchor
       );
 
-      let cleanup: (() => void) | null = null;
-
       try {
-        const response = await fetch(svgUrl);
-        if (!response.ok) throw new Error(`Failed to fetch SVG: ${svgUrl}`);
-        const svgText = await response.text();
-
-        const {
-          paths,
-          viewBox,
-          svg,
-          cleanup: cleanupFn,
-        } = parseSvgPaths(svgText);
-        cleanup = cleanupFn;
-
-        if (paths.length === 0) throw new Error("No paths found in SVG");
-
-        const outlineCount = Math.floor(dotCount * 0.85);
-        const interiorCount = dotCount - outlineCount;
-
-        const outlinePoints = samplePointsFromPaths(paths, outlineCount);
-        if (outlinePoints.length === 0)
-          throw new Error("Failed to sample outline points");
-
-        let interiorPoints: Point[] = [];
-        try {
-          interiorPoints = await samplePointsInFillFromPaths(
-            paths,
-            viewBox,
-            interiorCount,
-            svg
-          );
-          if (interiorPoints.length < interiorCount) {
-            const additionalOutline = samplePointsFromPaths(
-              paths,
-              interiorCount - interiorPoints.length
-            );
-            interiorPoints = interiorPoints.concat(additionalOutline);
-          }
-        } catch {
-          const additionalOutline = samplePointsFromPaths(paths, interiorCount);
-          interiorPoints = additionalOutline;
-        }
-
-        const sampledPoints = outlinePoints.concat(interiorPoints);
-        const fittedPoints = fitPointsToRect(
-          sampledPoints,
-          viewBox,
-          targetWidth,
-          targetHeight,
-          0
-        );
-
-        return fittedPoints.map((p) => ({
-          x: p.x + offsetX,
-          y: p.y + offsetY,
-        }));
+        return await getCachedFittedSvgPoints({
+          svgUrl,
+          count: dotCount,
+          fitWidth: fitW,
+          fitHeight: fitH,
+          paddingPx: 0,
+          offsetX,
+          offsetY,
+        });
       } catch (error) {
         console.warn(`Failed to load SVG ${svgUrl}, using fallback:`, error);
         const fallbackPoints = generateFallbackPoints(
           dotCount,
-          targetWidth,
-          targetHeight
+          fitW,
+          fitH
         );
         return fallbackPoints.map((p) => ({
           x: p.x + offsetX,
           y: p.y + offsetY,
         }));
-      } finally {
-        if (cleanup) cleanup();
       }
     },
-    [targetWidth, targetHeight, targetAnchor]
+    [targetAnchor, targetHeight, targetWidth]
   );
 
   // -------------------------------------------------------------------------
   // Scene Registration
   // -------------------------------------------------------------------------
 
-  const registerScene = useCallback((config: SceneConfig) => {
+  const registerScene = useCallback((config: SceneConfigInput) => {
     const prev = scenesRef.current.get(config.id);
-    scenesRef.current.set(config.id, config);
+
+    let order = sceneOrderRef.current.get(config.id);
+    if (order === undefined) {
+      order = ++sceneOrderCounterRef.current;
+      sceneOrderRef.current.set(config.id, order);
+    }
+
+    scenesRef.current.set(config.id, { ...config, order });
 
     sortedScenesRef.current = Array.from(scenesRef.current.values()).sort(
-      (a, b) => a.scrollStart - b.scrollStart
+      (a, b) => a.scrollStart - b.scrollStart || a.order - b.order
     );
 
     if (prev && prev.providerKey !== config.providerKey) {
       sceneTargetsRef.current.delete(config.id);
       targetsCacheRef.current.delete(config.id);
-      setScenesLoaded(false);
     }
 
     setScenesVersion((v) => v + 1);
@@ -437,8 +443,9 @@ export default function DotsCanvas({
     scenesRef.current.delete(id);
     sceneTargetsRef.current.delete(id);
     targetsCacheRef.current.delete(id);
+    sceneOrderRef.current.delete(id);
     sortedScenesRef.current = Array.from(scenesRef.current.values()).sort(
-      (a, b) => a.scrollStart - b.scrollStart
+      (a, b) => a.scrollStart - b.scrollStart || a.order - b.order
     );
     setScenesVersion((v) => v + 1);
   }, []);
@@ -448,41 +455,56 @@ export default function DotsCanvas({
   // -------------------------------------------------------------------------
 
   const loadAllSceneTargets = useCallback(async () => {
-    const scenes = sortedScenesRef.current;
-    if (scenes.length === 0 || canvasSize.width === 0) return;
+    const seq = ++targetsLoadSeqRef.current;
+    targetsLoadingRef.current = true;
+    try {
+      const scenes = sortedScenesRef.current;
+      if (scenes.length === 0 || canvasSize.width === 0) return;
 
-    const w = canvasSize.width;
-    const h = canvasSize.height;
-    const dotCount = count;
-    const globalKey = `${w}x${h}|dots:${dotCount}|tw:${targetWidth}|th:${targetHeight}|ta:${targetAnchor}`;
+      const w = canvasSize.width;
+      const h = canvasSize.height;
+      const dotCount = count;
+      const globalKey = `${w}x${h}|dots:${dotCount}|tw:${targetWidth}|th:${targetHeight}|ta:${targetAnchor}`;
 
-    const loadPromises = scenes.map(async (scene) => {
-      const cacheKey = `${scene.providerKey}|${globalKey}`;
-      const cached = targetsCacheRef.current.get(scene.id);
-      if (cached?.key === cacheKey) {
-        sceneTargetsRef.current.set(scene.id, cached.targets);
-        return;
-      }
+      const loadPromises = scenes.map(async (scene) => {
+        const cacheKey = `${scene.providerKey}|${globalKey}`;
+        const cached = targetsCacheRef.current.get(scene.id);
+        if (cached?.key === cacheKey) {
+          if (seq !== targetsLoadSeqRef.current) return;
+          sceneTargetsRef.current.set(scene.id, cached.targets);
+          return;
+        }
 
-      let targets: Point[];
+        let targets: Point[];
 
-      if (scene.provider.mode === "svg") {
+        if (scene.provider.mode === "svg") {
         if (!scene.svgUrl) {
           throw new Error(`DotsCanvas: svg scene "${scene.id}" missing svgUrl`);
         }
-        targets = await loadSvgPoints(scene.svgUrl, w, h, dotCount);
-      } else {
-        const maybe = scene.provider.getTargets(w, h, dotCount);
-        targets = maybe instanceof Promise ? await maybe : maybe;
+          targets = await getSvgTargets(
+            scene.svgUrl,
+            w,
+            h,
+            dotCount,
+            scene.targetScale
+          );
+        } else {
+          const maybe = scene.provider.getTargets(w, h, dotCount);
+          targets = maybe instanceof Promise ? await maybe : maybe;
+        }
+
+        if (seq !== targetsLoadSeqRef.current) return;
+        targetsCacheRef.current.set(scene.id, { key: cacheKey, targets });
+        sceneTargetsRef.current.set(scene.id, targets);
+      });
+
+      await Promise.all(loadPromises);
+    } finally {
+      if (seq === targetsLoadSeqRef.current) {
+        targetsLoadingRef.current = false;
       }
-
-      targetsCacheRef.current.set(scene.id, { key: cacheKey, targets });
-      sceneTargetsRef.current.set(scene.id, targets);
-    });
-
-    await Promise.all(loadPromises);
-    setScenesLoaded(true);
-  }, [canvasSize, count, loadSvgPoints, targetAnchor, targetHeight, targetWidth]);
+    }
+  }, [canvasSize, count, getSvgTargets, targetAnchor, targetHeight, targetWidth]);
 
   // -------------------------------------------------------------------------
   // Initialize Dots
@@ -568,58 +590,185 @@ export default function DotsCanvas({
     const scenes = sortedScenesRef.current;
     if (scenes.length === 0) return null;
 
-    const first = scenes[0];
-    if (scrollY < first.scrollStart) {
-      const from = sceneTargetsRef.current.get(first.id);
+    const getSceneCenterScore = (scene: SceneConfig) => {
+      const len = scene.scrollEnd - scene.scrollStart;
+      if (len <= 1e-3) return 1;
+      const t = (scrollY - scene.scrollStart) / len;
+      return Math.abs(t - 0.5);
+    };
+
+    const activeScenes: SceneConfig[] = [];
+    for (let i = 0; i < scenes.length; i++) {
+      const scene = scenes[i];
+      if (scrollY >= scene.scrollStart && scrollY <= scene.scrollEnd) {
+        activeScenes.push(scene);
+      }
+    }
+
+    const pickActive = (mode: DotTargetProvider["mode"]): SceneConfig | null => {
+      let best: SceneConfig | null = null;
+      let bestScore = Infinity;
+      for (const scene of activeScenes) {
+        if (scene.provider.mode !== mode) continue;
+        // Overlap tie-break: prefer the scene closest to its own center (t≈0.5),
+        // then fall back to mount order (higher `order` wins) for determinism.
+        const score = getSceneCenterScore(scene);
+        if (
+          score < bestScore ||
+          (score === bestScore && best && scene.order > best.order)
+        ) {
+          best = scene;
+          bestScore = score;
+        } else if (!best) {
+          best = scene;
+          bestScore = score;
+        }
+      }
+      return best;
+    };
+
+    // Mode arbitration (per-frame): scatter > dissipate > svg.
+    const scatterScene = pickActive("scatter");
+    if (scatterScene) {
+      const from = sceneTargetsRef.current.get(scatterScene.id);
       if (!from) return null;
       return {
         from,
         to: null as Point[] | null,
         t: 0,
-        mode: first.provider.mode,
-        activeSceneId: first.id,
+        mode: "scatter" as const,
+        activeSceneId: scatterScene.id,
       };
     }
 
-    for (let i = 0; i < scenes.length; i++) {
-      const scene = scenes[i];
-      const next = scenes[i + 1];
+    const dissipateScene = pickActive("dissipate");
+    if (dissipateScene) {
+      const from = sceneTargetsRef.current.get(dissipateScene.id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: "dissipate" as const,
+        activeSceneId: dissipateScene.id,
+      };
+    }
 
-      if (scrollY >= scene.scrollStart && scrollY <= scene.scrollEnd) {
-        const from = sceneTargetsRef.current.get(scene.id);
-        if (!from) return null;
+    const svgScene = pickActive("svg");
+    if (svgScene) {
+      const from = sceneTargetsRef.current.get(svgScene.id);
+      if (!from) return null;
 
-        if (next) {
-          const to = sceneTargetsRef.current.get(next.id);
-          if (to && scrollY > scene.scrollEnd - BLEND_PX) {
-            const t = clamp01((scrollY - (scene.scrollEnd - BLEND_PX)) / BLEND_PX);
-            const activeSceneId = t > 0.5 ? next.id : scene.id;
-            const mode = t > 0.5 ? next.provider.mode : scene.provider.mode;
-            return { from, to, t, mode, activeSceneId };
-          }
-        }
+      const idx = scenes.indexOf(svgScene);
+      const next = idx >= 0 ? scenes[idx + 1] : undefined;
 
-        return {
-          from,
-          to: null as Point[] | null,
-          t: 0,
-          mode: scene.provider.mode,
-          activeSceneId: scene.id,
-        };
-      }
-
-      if (next && scrollY > scene.scrollEnd && scrollY < next.scrollStart) {
-        const from = sceneTargetsRef.current.get(scene.id);
+      if (
+        next &&
+        next.provider.mode === "svg" &&
+        scrollY > svgScene.scrollEnd - BLEND_PX &&
+        scrollY <= svgScene.scrollEnd
+      ) {
         const to = sceneTargetsRef.current.get(next.id);
-        if (!from || !to) return null;
-
-        const t = clamp01(
-          (scrollY - scene.scrollEnd) / (next.scrollStart - scene.scrollEnd)
-        );
-        const activeSceneId = t > 0.5 ? next.id : scene.id;
-        const mode = t > 0.5 ? next.provider.mode : scene.provider.mode;
-        return { from, to, t, mode, activeSceneId };
+        if (to) {
+          const t = clamp01(
+            (scrollY - (svgScene.scrollEnd - BLEND_PX)) / BLEND_PX
+          );
+          const activeSceneId = t > 0.5 ? next.id : svgScene.id;
+          return { from, to, t, mode: "svg" as const, activeSceneId };
+        }
       }
+
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: "svg" as const,
+        activeSceneId: svgScene.id,
+      };
+    }
+
+    // No active scene: only interpolate between SVG scenes (scatter/dissipate are
+    // treated as strictly range-active to avoid leaking modes into gaps).
+    let prevSvgIndex = -1;
+    let nextSvgIndex = -1;
+    for (let i = 0; i < scenes.length; i++) {
+      const s = scenes[i];
+      if (s.provider.mode !== "svg") continue;
+      if (scrollY >= s.scrollEnd) prevSvgIndex = i;
+      if (nextSvgIndex === -1 && scrollY < s.scrollStart) nextSvgIndex = i;
+    }
+
+    const firstSvgIndex =
+      scenes.findIndex((s) => s.provider.mode === "svg") ?? -1;
+    const lastSvgIndex = (() => {
+      for (let i = scenes.length - 1; i >= 0; i--) {
+        if (scenes[i].provider.mode === "svg") return i;
+      }
+      return -1;
+    })();
+
+    if (scrollY < scenes[0].scrollStart) {
+      const idx = firstSvgIndex !== -1 ? firstSvgIndex : 0;
+      const from = sceneTargetsRef.current.get(scenes[idx].id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: scenes[idx].provider.mode,
+        activeSceneId: scenes[idx].id,
+      };
+    }
+
+    if (scrollY > scenes[scenes.length - 1].scrollEnd) {
+      const idx = lastSvgIndex !== -1 ? lastSvgIndex : scenes.length - 1;
+      const from = sceneTargetsRef.current.get(scenes[idx].id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: scenes[idx].provider.mode,
+        activeSceneId: scenes[idx].id,
+      };
+    }
+
+    if (prevSvgIndex !== -1 && nextSvgIndex !== -1) {
+      const a = scenes[prevSvgIndex];
+      const b = scenes[nextSvgIndex];
+      const from = sceneTargetsRef.current.get(a.id);
+      const to = sceneTargetsRef.current.get(b.id);
+      if (!from || !to) return null;
+      const denom = b.scrollStart - a.scrollEnd;
+      const t = denom <= 1e-3 ? 1 : clamp01((scrollY - a.scrollEnd) / denom);
+      const activeSceneId = t > 0.5 ? b.id : a.id;
+      return { from, to, t, mode: "svg" as const, activeSceneId };
+    }
+
+    if (prevSvgIndex !== -1) {
+      const a = scenes[prevSvgIndex];
+      const from = sceneTargetsRef.current.get(a.id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: "svg" as const,
+        activeSceneId: a.id,
+      };
+    }
+
+    if (nextSvgIndex !== -1) {
+      const b = scenes[nextSvgIndex];
+      const from = sceneTargetsRef.current.get(b.id);
+      if (!from) return null;
+      return {
+        from,
+        to: null as Point[] | null,
+        t: 0,
+        mode: "svg" as const,
+        activeSceneId: b.id,
+      };
     }
 
     const last = scenes[scenes.length - 1];
@@ -680,10 +829,92 @@ export default function DotsCanvas({
     [canvasSize.height, canvasSize.width]
   );
 
+  type TargetBlend = {
+    from: Point[];
+    to: Point[] | null;
+    t: number;
+    mode: DotTargetProvider["mode"];
+    activeSceneId: string;
+  };
+
+  const retargetDotsToBlend = useCallback(
+    (blend: TargetBlend, mode: RetargetMode, timeMs: number) => {
+      const dots = dotsRef.current;
+      if (dots.length === 0) return;
+
+      const fromTargets = blend.from;
+      const toTargets = blend.to;
+      const blendT = blend.t;
+
+      if (fromTargets.length === 0) return;
+
+      if (currentHomeRef.current.length !== count) {
+        currentHomeRef.current = new Array(count);
+      }
+
+      const maxVel = 1500;
+      const snap = mode === "snap";
+
+      if (snap) {
+        retargetBoostUntilRef.current = timeMs + 200;
+        retargetBoostFactorRef.current = 2.6;
+        forceHomeSnapUntilRef.current = timeMs + 200;
+      }
+
+      for (let i = 0; i < count; i++) {
+        const a = fromTargets[i % fromTargets.length];
+        let tx = a.x;
+        let ty = a.y;
+        if (toTargets) {
+          const b = toTargets[i % toTargets.length];
+          tx = lerp(a.x, b.x, blendT);
+          ty = lerp(a.y, b.y, blendT);
+        }
+
+        currentHomeRef.current[i] = { x: tx, y: ty };
+
+        const dot = dots[i];
+        if (!dot) continue;
+
+        if (snap) {
+          dot.vel.x *= 0.2;
+          dot.vel.y *= 0.2;
+        }
+
+        const v = Math.hypot(dot.vel.x, dot.vel.y);
+        if (v > maxVel) {
+          const s = maxVel / v;
+          dot.vel.x *= s;
+          dot.vel.y *= s;
+        }
+      }
+    },
+    [count]
+  );
+
+  const retargetDotsToTargets = useCallback(
+    (targets: Point[], mode: RetargetMode, timeMs: number) => {
+      const blend: TargetBlend = {
+        from: targets,
+        to: null,
+        t: 0,
+        mode: "svg",
+        activeSceneId: activeSceneIdRef.current ?? "manual",
+      };
+      retargetDotsToBlend(blend, mode, timeMs);
+    },
+    [retargetDotsToBlend]
+  );
+
   const updateCurrentHomeTargets = useCallback(
     (timeMs: number) => {
-      const blend = getTargetBlend(scrollYRef.current);
+      const blend = getTargetBlend(scrollYRef.current) as TargetBlend | null;
       if (!blend) return;
+
+      if (pendingResizeSnapRef.current && !targetsLoadingRef.current) {
+        pendingResizeSnapRef.current = false;
+        retargetDotsToBlend(blend, "snap", timeMs);
+      }
 
       const prevMode = activeModeRef.current;
       if (blend.mode !== prevMode) {
@@ -697,6 +928,26 @@ export default function DotsCanvas({
 
       activeSceneIdRef.current = blend.activeSceneId;
 
+      const controllerChanged = lastActiveControllerIdRef.current !== blend.activeSceneId;
+      lastActiveControllerIdRef.current = blend.activeSceneId;
+      const activeScene = scenesRef.current.get(blend.activeSceneId) ?? null;
+      const providerKeyNow = activeScene?.providerKey ?? null;
+      const providerKeyChanged = lastActiveProviderKeyRef.current !== providerKeyNow;
+      lastActiveProviderKeyRef.current = providerKeyNow;
+
+      if (
+        activeScene &&
+        blend.mode === "svg" &&
+        activeScene.snapOnEnter &&
+        (controllerChanged || providerKeyChanged)
+      ) {
+        burstUntilRef.current = timeMs + SNAP_ON_ENTER_BURST_MS;
+        burstSceneIdRef.current = blend.activeSceneId;
+        burstStiffnessMultRef.current = activeScene.stiffnessMult;
+        burstDampingMultRef.current = activeScene.dampingMult;
+        burstMaxSpeedMultRef.current = activeScene.maxSpeedMult;
+      }
+
       if (
         blend.mode === "dissipate" &&
         dissipateImpulseKeyRef.current !== blend.activeSceneId
@@ -707,6 +958,8 @@ export default function DotsCanvas({
       const fromTargets = blend.from;
       const toTargets = blend.to;
       const blendT = blend.t;
+      const homeBlend =
+        timeMs < forceHomeSnapUntilRef.current ? 1 : morphSpeed;
 
       if (currentHomeRef.current.length === 0) {
         const homes: Point[] = new Array(count);
@@ -735,15 +988,94 @@ export default function DotsCanvas({
 
         const current = currentHomeRef.current[i];
         if (current) {
-          current.x = lerp(current.x, tx, morphSpeed);
-          current.y = lerp(current.y, ty, morphSpeed);
+          current.x = lerp(current.x, tx, homeBlend);
+          current.y = lerp(current.y, ty, homeBlend);
         } else {
           currentHomeRef.current[i] = { x: tx, y: ty };
         }
       }
     },
-    [applyDissipateImpulse, count, getTargetBlend, morphSpeed]
+    [applyDissipateImpulse, count, getTargetBlend, morphSpeed, retargetDotsToBlend]
   );
+
+  const retargetToSvgInternal = useCallback(
+    (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => {
+      if (!svgUrl) return;
+
+      const w = canvasSize.width;
+      const h = canvasSize.height;
+      if (w === 0 || h === 0) {
+        pendingRetargetRef.current = { svgUrl, mode };
+        return;
+      }
+
+      const blendNow = getTargetBlend(scrollYRef.current);
+      if (blendNow && blendNow.mode !== "svg") return;
+
+      const timeMs = engineTimeMsRef.current || performance.now();
+
+      if (opts && opts.burstMs && opts.burstMs > 0) {
+        const activeId = activeSceneIdRef.current ?? null;
+        if (activeId) {
+          burstUntilRef.current = timeMs + opts.burstMs;
+          burstSceneIdRef.current = activeId;
+          burstStiffnessMultRef.current = opts.stiffnessMult ?? 1;
+          burstDampingMultRef.current = opts.dampingMult ?? 1;
+          burstMaxSpeedMultRef.current = opts.maxSpeedMult ?? 1;
+        }
+      }
+
+      void (async () => {
+        const activeId = activeSceneIdRef.current;
+        const targetScale =
+          (activeId ? scenesRef.current.get(activeId)?.targetScale : undefined) ??
+          1;
+        const targets = await getSvgTargets(svgUrl, w, h, count, targetScale);
+
+        const activeSceneId = activeSceneIdRef.current;
+        if (activeSceneId) {
+          const scene = scenesRef.current.get(activeSceneId);
+          if (scene?.provider.mode === "svg") {
+            sceneTargetsRef.current.set(activeSceneId, targets);
+          }
+        }
+
+        retargetDotsToTargets(targets, mode, timeMs);
+      })().catch((error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[DotsCanvas] retargetToSvg failed:", error);
+        }
+      });
+    },
+    [
+      canvasSize.height,
+      canvasSize.width,
+      count,
+      getSvgTargets,
+      getTargetBlend,
+      retargetDotsToTargets,
+    ]
+  );
+
+  useEffect(() => {
+    const fn = (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => {
+      retargetToSvgInternal(svgUrl, mode, opts);
+    };
+    imperativeRetargetToSvg = fn;
+    return () => {
+      if (imperativeRetargetToSvg === fn) {
+        imperativeRetargetToSvg = null;
+      }
+    };
+  }, [retargetToSvgInternal]);
+
+  useEffect(() => {
+    if (canvasSize.width === 0 || canvasSize.height === 0) return;
+    const pending = pendingRetargetRef.current;
+    if (!pending) return;
+    pendingRetargetRef.current = null;
+    retargetToSvgInternal(pending.svgUrl, pending.mode);
+  }, [canvasSize.height, canvasSize.width, retargetToSvgInternal]);
 
   // -------------------------------------------------------------------------
   // Physics Update
@@ -757,6 +1089,39 @@ export default function DotsCanvas({
       const currentHome = currentHomeRef.current;
 
       if (dots.length === 0 || currentHome.length === 0) return;
+
+      const activeControllerId = activeSceneIdRef.current;
+      const activeConfig = activeControllerId
+        ? scenesRef.current.get(activeControllerId) ?? null
+        : null;
+
+      const applySceneOverrides =
+        activeConfig && activeConfig.provider.mode === activeModeRef.current;
+
+      const sceneStiffnessMult = applySceneOverrides
+        ? activeConfig.stiffnessMult
+        : 1;
+      const sceneDampingMult = applySceneOverrides ? activeConfig.dampingMult : 1;
+      const sceneMaxSpeedMult = applySceneOverrides
+        ? activeConfig.maxSpeedMult
+        : 1;
+
+      const applyBurst =
+        activeControllerId !== null &&
+        burstSceneIdRef.current === activeControllerId &&
+        timestamp < burstUntilRef.current;
+
+      const burstStiffnessMult = applyBurst ? burstStiffnessMultRef.current : 1;
+      const burstDampingMult = applyBurst ? burstDampingMultRef.current : 1;
+      const burstMaxSpeedMult = applyBurst ? burstMaxSpeedMultRef.current : 1;
+
+      const effectiveStiffnessMult = sceneStiffnessMult * burstStiffnessMult;
+      const effectiveDampingMult = sceneDampingMult * burstDampingMult;
+      const effectiveMaxSpeedMult = sceneMaxSpeedMult * burstMaxSpeedMult;
+      const shouldApplyMaxSpeedClamp = applySceneOverrides || applyBurst;
+      const maxSpeed = shouldApplyMaxSpeedClamp
+        ? BASE_MAX_SPEED_PX_PER_S * effectiveMaxSpeedMult
+        : 0;
 
       let initialProgress = 0;
       let transitionProgress = 0;
@@ -819,6 +1184,11 @@ export default function DotsCanvas({
         jitterMult = p.jitterMult;
       }
 
+      const retargetBoost =
+        timestamp < retargetBoostUntilRef.current
+          ? retargetBoostFactorRef.current
+          : 1;
+
       for (let i = 0; i < dots.length; i++) {
         const dot = dots[i];
         const home = currentHome[i] || currentHome[0];
@@ -833,10 +1203,12 @@ export default function DotsCanvas({
           const dy = home.y - dot.pos.y;
 
           const stiffness =
-            dot.baseStiffness * lerp(2.0, 0.3, easedTransitionProgress);
+            dot.baseStiffness *
+            lerp(2.0, 0.3, easedTransitionProgress) *
+            effectiveStiffnessMult;
           const noiseAmp =
             dot.baseNoiseAmp * lerp(0.0, 1.5, easedTransitionProgress);
-          const damping = dot.baseDamping;
+          const damping = dot.baseDamping * effectiveDampingMult;
 
           let fx = stiffness * dx;
           let fy = stiffness * dy;
@@ -862,6 +1234,14 @@ export default function DotsCanvas({
 
           dot.vel.x = (dot.vel.x + fx * dt) * damping;
           dot.vel.y = (dot.vel.y + fy * dt) * damping;
+          if (maxSpeed > 0) {
+            const v = Math.hypot(dot.vel.x, dot.vel.y);
+            if (v > maxSpeed) {
+              const s = maxSpeed / v;
+              dot.vel.x *= s;
+              dot.vel.y *= s;
+            }
+          }
           dot.pos.x += dot.vel.x * dt;
           dot.pos.y += dot.vel.y * dt;
         } else {
@@ -869,9 +1249,14 @@ export default function DotsCanvas({
           const dy = home.y - dot.pos.y;
 
           // Higher stiffness for faster snapping during scroll
-          const stiffness = dot.baseStiffness * 1.2 * stiffnessMult;
+          const stiffness =
+            dot.baseStiffness *
+            1.2 *
+            stiffnessMult *
+            retargetBoost *
+            effectiveStiffnessMult;
           const noiseAmp = dot.baseNoiseAmp * 0.8 * noiseMult;
-          let damping = dot.baseDamping;
+          let damping = dot.baseDamping * effectiveDampingMult;
 
           if (modeNow === "scatter") {
             const wobble = 0.5 + 0.5 * Math.sin(time * 0.9 + dot.seedA);
@@ -913,6 +1298,14 @@ export default function DotsCanvas({
 
           dot.vel.x = (dot.vel.x + fx * dt) * damping;
           dot.vel.y = (dot.vel.y + fy * dt) * damping;
+          if (maxSpeed > 0) {
+            const v = Math.hypot(dot.vel.x, dot.vel.y);
+            if (v > maxSpeed) {
+              const s = maxSpeed / v;
+              dot.vel.x *= s;
+              dot.vel.y *= s;
+            }
+          }
           dot.pos.x += dot.vel.x * dt;
           dot.pos.y += dot.vel.y * dt;
         }
@@ -939,6 +1332,7 @@ export default function DotsCanvas({
 
     const dots = dotsRef.current;
     const currentHome = currentHomeRef.current;
+    if (currentHome.length === 0) return;
     const SETTLED_PX = 1.25;
 
     const grayRgb = grayRgbRef.current;
@@ -969,6 +1363,7 @@ export default function DotsCanvas({
       }
 
       const home = currentHome[i] || currentHome[0];
+      if (!home) continue;
       const dx = dot.pos.x - home.x;
       const dy = dot.pos.y - home.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1064,6 +1459,7 @@ export default function DotsCanvas({
       if (resizeRafRef.current !== null) return;
       resizeRafRef.current = window.requestAnimationFrame(() => {
         resizeRafRef.current = null;
+        pendingResizeSnapRef.current = true;
         setupCanvas();
       });
     };
@@ -1082,6 +1478,7 @@ export default function DotsCanvas({
   useEffect(() => {
     const unsubscribe = subscribe((state) => {
       scrollYRef.current = state.scrollY;
+      engineTimeMsRef.current = state.time;
 
       if (prefersReducedMotionRef.current) {
         updateCurrentHomeTargets(state.time);
@@ -1119,7 +1516,7 @@ export default function DotsCanvas({
   }, [canvasSize, loadAllSceneTargets, scenesVersion]);
 
   useEffect(() => {
-    if (!scenesLoaded || canvasSize.width === 0) return;
+    if (canvasSize.width === 0) return;
 
     if (lastCountRef.current !== count) {
       lastCountRef.current = count;
@@ -1140,18 +1537,7 @@ export default function DotsCanvas({
     phaseRef.current = "initial";
     lastTimeRef.current = null;
     needsReinitRef.current = false;
-  }, [
-    scenesLoaded,
-    canvasSize,
-    count,
-    initializeDots,
-  ]);
-
-  useEffect(() => {
-    if (!scenesLoaded) {
-      needsReinitRef.current = true;
-    }
-  }, [scenesLoaded]);
+  }, [canvasSize, count, initializeDots]);
 
   // -------------------------------------------------------------------------
   // Render

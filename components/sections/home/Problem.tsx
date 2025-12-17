@@ -66,7 +66,8 @@ export default function Problem() {
 
   // First paragraph: fades out through the "problem" phase.
   // Resolution begins when the dissipate scene starts (see page layout).
-  const resolutionStart = 2 / 3;
+  // With 100vh scatter + 100vh dissipate in a 300vh section, dissipate starts at 50% scroll.
+  const resolutionStart = 1 / 2;
   const fadeOutProgress = Math.min(1, progress / resolutionStart);
   const fadeOutOpacity = 1 - fadeOutProgress * 0.85;
 

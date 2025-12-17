@@ -11,7 +11,19 @@ interface DotsSceneProps {
   /** URL to the SVG file for this scene's dot formation */
   svgUrl?: string;
   scatter?: boolean;
+  /** Back-compat alias for `dissipate` */
+  disperse?: boolean;
   dissipate?: boolean;
+  /** Per-scene physics overrides (active scene only). Default: 1 */
+  stiffnessMult?: number;
+  /** Per-scene physics overrides (active scene only). Default: 1 */
+  dampingMult?: number;
+  /** Per-scene physics overrides (active scene only). Default: 1 */
+  maxSpeedMult?: number;
+  /** If true, apply a brief "fast settle" burst when this scene becomes active or svgUrl changes. */
+  snapOnEnter?: boolean;
+  /** Scale applied when fitting SVG points (not a CSS transform). Default: 1 */
+  targetScale?: number;
   /** 
    * Scroll offset from the element's top where morphing to this SVG begins.
    * Can be negative to start before the element enters viewport.
@@ -47,7 +59,13 @@ interface DotsSceneProps {
 export default function DotsScene({
   svgUrl,
   scatter,
+  disperse,
   dissipate,
+  stiffnessMult = 1,
+  dampingMult = 1,
+  maxSpeedMult = 1,
+  snapOnEnter = false,
+  targetScale = 1,
   scrollStartOffset = 0,
   children,
   className,
@@ -56,17 +74,21 @@ export default function DotsScene({
   const id = useId();
   const elementRef = useRef<HTMLElement>(null);
   const rafIdRef = useRef<number | null>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const stopScrollContainerResizeRef = useRef<(() => void) | null>(null);
   const { registerScene, unregisterScene } = useDotsCanvas();
 
   const { mode, providerKey } = useMemo(() => {
     const requested: Array<DotTargetProvider["mode"]> = [];
+    const dissipateResolved = Boolean(dissipate || disperse);
     if (svgUrl) requested.push("svg");
     if (scatter) requested.push("scatter");
-    if (dissipate) requested.push("dissipate");
+    if (dissipateResolved) requested.push("dissipate");
 
     let resolved: DotTargetProvider["mode"] = "svg";
-    if (dissipate) resolved = "dissipate";
-    else if (scatter) resolved = "scatter";
+    // Scene-level mutual exclusivity: scatter > dissipate > svg.
+    if (scatter) resolved = "scatter";
+    else if (dissipateResolved) resolved = "dissipate";
     else if (svgUrl) resolved = "svg";
 
     if (requested.length > 1 && process.env.NODE_ENV !== "production") {
@@ -77,7 +99,7 @@ export default function DotsScene({
       );
     }
 
-    if (!svgUrl && !scatter && !dissipate && process.env.NODE_ENV !== "production") {
+    if (!svgUrl && !scatter && !dissipateResolved && process.env.NODE_ENV !== "production") {
       console.warn(
         `[DotsScene] No mode specified; set svgUrl, scatter, or dissipate. Defaulting to "scatter".`
       );
@@ -85,10 +107,12 @@ export default function DotsScene({
     }
 
     const key =
-      resolved === "svg" ? `svg:${svgUrl ?? ""}` : resolved;
+      resolved === "svg"
+        ? `svg:${svgUrl ?? ""}|scale:${targetScale}`
+        : resolved;
 
     return { mode: resolved, providerKey: key };
-  }, [dissipate, scatter, svgUrl]);
+  }, [dissipate, disperse, scatter, svgUrl, targetScale]);
 
   const provider: DotTargetProvider = useMemo(() => {
     if (mode === "scatter") {
@@ -115,9 +139,10 @@ export default function DotsScene({
     if (!element) return;
 
     const updateMeasurements = () => {
+      const scrollContainer = scrollContainerRef.current ?? getScrollContainer();
       const { elementTop, elementHeight } = measureElement(
         element as HTMLElement,
-        getScrollContainer()
+        scrollContainer
       );
       
       const scrollStart = elementTop + scrollStartOffset;
@@ -130,6 +155,11 @@ export default function DotsScene({
         svgUrl,
         providerKey,
         provider,
+        stiffnessMult,
+        dampingMult,
+        maxSpeedMult,
+        snapOnEnter,
+        targetScale,
       });
     };
 
@@ -141,33 +171,49 @@ export default function DotsScene({
       });
     };
 
-    // Initial measurement
+    const attachScrollContainer = (next: HTMLElement | null) => {
+      if (scrollContainerRef.current === next) return;
+      stopScrollContainerResizeRef.current?.();
+      stopScrollContainerResizeRef.current = null;
+      scrollContainerRef.current = next;
+      if (next) {
+        stopScrollContainerResizeRef.current = observeResize(next, () => {
+          scheduleUpdateMeasurements();
+        });
+      }
+      scheduleUpdateMeasurements();
+    };
+
+    // Initial measurement + observers
+    attachScrollContainer(getScrollContainer());
     updateMeasurements();
+
+    const onWindowResize = () => scheduleUpdateMeasurements();
+    window.addEventListener("resize", onWindowResize);
 
     // Delayed re-measures to handle late layout shifts (fonts, async content)
     const timeout250 = window.setTimeout(scheduleUpdateMeasurements, 250);
     const timeout1200 = window.setTimeout(scheduleUpdateMeasurements, 1200);
 
-    // Re-measure on resize
+    // Re-measure on element resize
     const stopElementResize = observeResize(element as HTMLElement, () => {
       scheduleUpdateMeasurements();
     });
 
-    const scrollContainer = getScrollContainer();
-    const stopScrollContainerResize = scrollContainer
-      ? observeResize(scrollContainer, () => {
-          scheduleUpdateMeasurements();
-        })
-      : null;
-
-    const stopRootResize = observeResize(document.documentElement, () => {
-      scheduleUpdateMeasurements();
-    });
-
-    // If the scroll container isn't set yet, the document root observer serves
-    // as a fallback for viewport/layout changes.
+    // Brief rAF poll to catch late scroll-container wiring (null -> element).
+    let mounted = true;
+    const pollStart = performance.now();
+    const poll = () => {
+      if (!mounted) return;
+      if (performance.now() - pollStart > 2500) return;
+      attachScrollContainer(getScrollContainer());
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
 
     return () => {
+      mounted = false;
+      window.removeEventListener("resize", onWindowResize);
       window.clearTimeout(timeout250);
       window.clearTimeout(timeout1200);
       if (rafIdRef.current !== null) {
@@ -175,11 +221,24 @@ export default function DotsScene({
         rafIdRef.current = null;
       }
       stopElementResize();
-      stopScrollContainerResize?.();
-      stopRootResize();
+      stopScrollContainerResizeRef.current?.();
+      stopScrollContainerResizeRef.current = null;
       unregisterScene(id);
     };
-  }, [id, provider, providerKey, registerScene, scrollStartOffset, svgUrl, unregisterScene]);
+  }, [
+    dampingMult,
+    id,
+    maxSpeedMult,
+    provider,
+    providerKey,
+    registerScene,
+    scrollStartOffset,
+    snapOnEnter,
+    stiffnessMult,
+    svgUrl,
+    targetScale,
+    unregisterScene,
+  ]);
 
   return (
     <Component
