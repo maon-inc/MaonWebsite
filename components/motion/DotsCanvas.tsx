@@ -95,7 +95,8 @@ type TargetAnchor =
   | "top-right"
   | "bottom-center"
   | "bottom-left"
-  | "bottom-right";
+  | "bottom-right"
+  | "right-center";
 
 interface DotsCanvasProps {
   children: ReactNode;
@@ -186,7 +187,10 @@ function calculateTargetOffset(
   let offsetY = 0;
 
   // Horizontal
-  if (anchor.includes("left")) {
+  if (anchor === "right-center") {
+    // Position on the right side with some margin from edge
+    offsetX = canvasWidth - targetWidth - (canvasWidth * 0.15);
+  } else if (anchor.includes("left")) {
     offsetX = 0;
   } else if (anchor.includes("right")) {
     offsetX = canvasWidth - targetWidth;
@@ -199,7 +203,10 @@ function calculateTargetOffset(
   }
 
   // Vertical
-  if (anchor === "top-center") {
+  if (anchor === "right-center") {
+    // Vertically centered
+    offsetY = (canvasHeight - targetHeight) / 2;
+  } else if (anchor === "top-center") {
     // Center in upper portion, leaving room for bottom text
     const upperRegion = canvasHeight * 0.75;
     offsetY = (upperRegion - targetHeight) / 2;

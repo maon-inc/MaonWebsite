@@ -11,21 +11,21 @@ export default function Intro() {
           <Image
             src="/assets/intro_pic.png"
             alt="Flow Ring and App"
-            width={400}
-            height={600}
-            className="w-[200px] md:w-[300px] h-auto"
+            width={300}
+            height={500}
+            className="pl-5 w-[170px] md:w-[300px] h-auto"
             priority
           />
         </div>
 
         {/* Text content on the right */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-6 max-w-[500px]">
-          <h2 className="text-m-merriweather-30-regular md:text-d-merriweather-40-regular italic">
+        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4 max-w-[500px]">
+          <h2 className="text-d-merriweather-32-regular md:text-d-merriweather-40-regular italic mb-2">
             Introducing the
             <br />
             Flow Ring
           </h2>
-          <p className="text-d-lato-24-regular md:text-d-lato-24-regular">
+          <p className="text-d-lato-24-regular md:text-d-lato-24-regular pb-2">
             When you feel off, we&apos;ll guide your body back to balance with
             subtle, intelligent haptic cues &amp; app limits.
           </p>

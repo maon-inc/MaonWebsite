@@ -115,7 +115,7 @@ function CrossfadeText({
   // Mobile: icon is fixed position, title and body flow with margin-top
   if (!isDesktop) {
     return (
-      <div className="relative text-center w-full" style={{ marginTop: "60vh" }}>
+      <div className="relative text-center w-full" style={{ marginTop: "50vh" }}>
         {/* Icon - fixed position at top of this container */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 flex justify-center"
@@ -149,7 +149,7 @@ function CrossfadeText({
           {step.body}
         </p>
         {/* Navigation buttons */}
-        <div className="flex items-center justify-center gap-6 mt-6">
+        {/* <div className="flex items-center justify-center gap-6 mt-6">
           <button 
             onClick={onPrev}
             className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
@@ -166,7 +166,7 @@ function CrossfadeText({
           >
             <img src="/assets/ui/forward.svg" alt="" width={14} height={18} />
           </button>
-        </div>
+        </div> */}
       </div>
     );
   }
@@ -205,7 +205,7 @@ function CrossfadeText({
         {step.body}
       </p>
       {/* Navigation buttons */}
-      <div className="flex items-center gap-6 mt-6">
+      {/* <div className="flex items-center gap-6 mt-6">
         <button 
           onClick={onPrev}
           className="p-2 transition-opacity hover:opacity-70 disabled:opacity-30"
@@ -222,7 +222,7 @@ function CrossfadeText({
         >
           <img src="/assets/ui/forward.svg" alt="" width={20} height={26} />
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }
@@ -231,16 +231,18 @@ export default function Day() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeSvgUrl, setActiveSvgUrl] = useState(steps[0].svgUrl);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const lastActiveIndexRef = useRef(0);
   const lastProgressRef = useRef(0);
   const progressRef = useRef(0);
   const lastSvgUrlRef = useRef(steps[0].svgUrl);
+  // Direct DOM refs for smooth progress bar
+  const progressBarRef1 = useRef<HTMLDivElement>(null);
+  const progressBarRef2 = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
   const lastStepChangeRef = useRef<number>(0);
-  const STEP_CHANGE_COOLDOWN_MS = 150; // Minimum time between step changes
+  const STEP_CHANGE_COOLDOWN_MS = 200; // Increased cooldown for stability
   // Add refs to track pending updates:
   const pendingIndexRef = useRef<number | null>(null);
   const updateRafRef = useRef<number | null>(null);
@@ -248,6 +250,12 @@ export default function Day() {
   const lastScrollYRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
   const prevSvgUrlRef = useRef<string>(steps[0].svgUrl);
+  // Auto-scroll refs
+  const autoScrollRef = useRef<number | null>(null);
+  const isAutoScrollingRef = useRef(false);
+  const userScrollTimeoutRef = useRef<number | null>(null);
+  const lastUserScrollRef = useRef<number>(0);
+  const USER_SCROLL_PAUSE_MS = 2000; // pause auto-scroll for 2s after user scrolls
 
   useEffect(() => {
     // Preload all SVGs on mount to avoid loading during scroll
@@ -319,16 +327,20 @@ export default function Day() {
     const stopResize = observeResize(section, recompute);
 
     const unsubscribe = subscribe((state) => {
-      // Add velocity-based frame skipping:
       const scrollVelocity = Math.abs(state.scrollY - lastScrollYRef.current);
+      const now = performance.now();
+      
+      // Detect user scroll (not auto-scroll)
+      if (scrollVelocity > 2 && !isAutoScrollingRef.current) {
+        lastUserScrollRef.current = now;
+      }
+      
       lastScrollYRef.current = state.scrollY;
       frameCountRef.current++;
 
-      // Skip expensive calculations during very fast scrolling
-      const isFastScrolling = scrollVelocity > 100; // pixels per frame
-      if (isFastScrolling && frameCountRef.current % 3 !== 0) {
-        return; // Process every 3rd frame during fast scroll
-      }
+      // During rapid scrolling, process fewer frames but always update progress
+      const isFastScrolling = scrollVelocity > 150;
+      const skipFrame = isFastScrolling && frameCountRef.current % 2 !== 0;
 
       const viewportH = state.viewportH;
       const scrollStart = sectionTopRef.current;
@@ -336,17 +348,35 @@ export default function Day() {
       const scrollRange = scrollEnd - scrollStart;
 
       if (scrollRange <= 0) {
-        const newIndex = 0;
         lastProgressRef.current = 0;
-        if (newIndex !== lastActiveIndexRef.current) {
-          lastActiveIndexRef.current = newIndex;
-          setActiveIndex(newIndex);
+        progressRef.current = 0;
+        if (progressBarRef1.current) progressBarRef1.current.style.width = '0%';
+        if (progressBarRef2.current) progressBarRef2.current.style.width = '0%';
+        if (lastActiveIndexRef.current !== 0) {
+          lastActiveIndexRef.current = 0;
+          setActiveIndex(0);
         }
         return;
       }
 
       const rawProgress = (state.scrollY - scrollStart) / scrollRange;
       const progress = Math.max(0, Math.min(1, rawProgress));
+
+      // Update progress bar directly via DOM for smooth animation
+      progressRef.current = progress;
+      const widthPercent = `${progress * 100}%`;
+      if (progressBarRef1.current) {
+        progressBarRef1.current.style.width = widthPercent;
+      }
+      if (progressBarRef2.current) {
+        progressBarRef2.current.style.width = widthPercent;
+      }
+
+      // Skip index calculations during very fast scrolling
+      if (skipFrame) {
+        lastProgressRef.current = progress;
+        return;
+      }
 
       const segmentLen = 1 / steps.length;
       const raw = progress * steps.length;
@@ -356,14 +386,13 @@ export default function Day() {
       );
 
       const currentIndex = lastActiveIndexRef.current;
-      const lastProgress = lastProgressRef.current;
-      const goingUp = progress < lastProgress;
-      const hysteresis = 0.02 * segmentLen;
+      const hysteresis = 0.015 * segmentLen;
 
       let nextIndex = currentIndex;
       const delta = desiredIndex - currentIndex;
       if (delta !== 0) {
         if (Math.abs(delta) > 1) {
+          // Jump multiple steps - go directly
           nextIndex = desiredIndex;
         } else if (delta > 0) {
           const boundary = (currentIndex + 1) * segmentLen;
@@ -379,47 +408,72 @@ export default function Day() {
       }
 
       lastProgressRef.current = progress;
-      
-      // Update scroll progress for the progress bar (throttled)
-      if (Math.abs(progress - progressRef.current) > 0.005) {
-        progressRef.current = progress;
-        setScrollProgress(progress);
-      }
 
       if (nextIndex !== currentIndex) {
-        const now = performance.now();
         if (now - lastStepChangeRef.current < STEP_CHANGE_COOLDOWN_MS) {
           return;
         }
 
         lastStepChangeRef.current = now;
         lastActiveIndexRef.current = nextIndex;
-        pendingIndexRef.current = nextIndex;
-
-        // Batch React updates outside the scroll handler
-        if (updateRafRef.current === null) {
-          updateRafRef.current = requestAnimationFrame(() => {
-            updateRafRef.current = null;
-            const idx = pendingIndexRef.current;
-            if (idx !== null) {
-              setActiveIndex(idx);
-              const svgUrl = steps[idx].svgUrl;
-              if (svgUrl !== lastSvgUrlRef.current) {
-                lastSvgUrlRef.current = svgUrl;
-                setActiveSvgUrl(svgUrl);
-              }
-            }
-          });
+        
+        // Update immediately without RAF batching for responsiveness
+        setActiveIndex(nextIndex);
+        const svgUrl = steps[nextIndex].svgUrl;
+        if (svgUrl !== lastSvgUrlRef.current) {
+          lastSvgUrlRef.current = svgUrl;
+          setActiveSvgUrl(svgUrl);
         }
       }
     });
 
     return () => {
-      if (updateRafRef.current !== null) {
-        cancelAnimationFrame(updateRafRef.current);
-      }
       stopResize();
       unsubscribe();
+    };
+  }, []);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) return;
+
+    const autoScroll = () => {
+      const now = performance.now();
+      const timeSinceUserScroll = now - lastUserScrollRef.current;
+      
+      // Only auto-scroll if user hasn't scrolled recently
+      if (timeSinceUserScroll < USER_SCROLL_PAUSE_MS) {
+        autoScrollRef.current = requestAnimationFrame(autoScroll);
+        return;
+      }
+
+      const scrollStart = sectionTopRef.current;
+      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - scrollContainer.clientHeight;
+      const currentScroll = scrollContainer.scrollTop;
+
+      // Check if we're in the Day section and not at the end
+      if (currentScroll >= scrollStart && currentScroll < scrollEnd) {
+        isAutoScrollingRef.current = true;
+        // Faster auto-scroll for mobile
+        const autoScrollSpeed = isDesktop ? 1.5 : 4.0;
+        scrollContainer.scrollTop = currentScroll + autoScrollSpeed;
+        // Reset flag after a short delay
+        setTimeout(() => {
+          isAutoScrollingRef.current = false;
+        }, 50);
+      }
+
+      autoScrollRef.current = requestAnimationFrame(autoScroll);
+    };
+
+    // Start auto-scroll loop
+    autoScrollRef.current = requestAnimationFrame(autoScroll);
+
+    return () => {
+      if (autoScrollRef.current !== null) {
+        cancelAnimationFrame(autoScrollRef.current);
+      }
     };
   }, []);
 
@@ -430,34 +484,34 @@ export default function Day() {
       prevSvgUrlRef.current = activeSvgUrl;
       
       retargetToSvg(activeSvgUrl, goingUp ? "snap" : "soft", {
-        burstMs: 250,
-        stiffnessMult: 2.0,
-        dampingMult: 0.94,
-        maxSpeedMult: 1.6,
+        burstMs: 150,
+        stiffnessMult: 3.0,
+        dampingMult: 0.92,
+        maxSpeedMult: 2.2,
       });
     }
   }, [activeSvgUrl, activeIndex]);
 
-  const svgScale = isDesktop ? 1.5 : 1.3;
+  const svgScale = isDesktop ? 1.5 : 1.1;
   const dotAnchor = isDesktop ? "bottom-right" : "top-center";
-  const lockInMs = isDesktop ? 500 : 350;
-  const homeSnapMs = isDesktop ? 350 : 280;
-  const swayRampMs = isDesktop ? 900 : 700;
+  const lockInMs = isDesktop ? 300 : 200;
+  const homeSnapMs = isDesktop ? 200 : 150;
+  const swayRampMs = isDesktop ? 600 : 500;
   const settleRadiusPx = isDesktop ? 10 : 8;
   const snapRadiusPx = isDesktop ? 12 : 10;
-  const snapSpeedPxPerSec = isDesktop ? 400 : 350;
-  const targetOffsetY = isDesktop ? -100 : -60;
+  const snapSpeedPxPerSec = isDesktop ? 450 : 400;
+  const targetOffsetY = isDesktop ? -100 : -80;
 
   return (
-    <section ref={sectionRef} className="relative grid h-[800vh]">
+    <section ref={sectionRef} className="relative grid h-[1000vh]">
       {/* DotsScene layer - covers full section height for scroll registration */}
       <div className="pointer-events-none col-start-1 row-start-1">
         <DotsScene
           svgUrl={activeSvgUrl}
           className="h-full"
-          stiffnessMult={2.5}
-          dampingMult={0.9}
-          maxSpeedMult={1.5}
+          stiffnessMult={3.5}
+          dampingMult={0.88}
+          maxSpeedMult={2.0}
           snapOnEnter
           targetScale={svgScale}
           targetAnchor={dotAnchor}
@@ -466,7 +520,7 @@ export default function Day() {
           homeSnapMs={homeSnapMs}
           swayRampMs={swayRampMs}
           swayStyle="targetOffset"
-          morphSpeedMult={4.0}
+          morphSpeedMult={5.5}
           settleRadiusPx={settleRadiusPx}
           snapRadiusPx={snapRadiusPx}
           snapSpeedPxPerSec={snapSpeedPxPerSec}
@@ -476,14 +530,14 @@ export default function Day() {
       {/* Content in sticky container */}
       <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-start justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
         {/* Text box - fixed position on mobile, positioned above the icon */}
-        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[53vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[45vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
           {/* Progress fill */}
           <div 
+            ref={progressBarRef1}
             className="absolute inset-0 rounded-[10px]" 
             style={{ 
               backgroundColor: "#97CEE7", 
-              width: `${scrollProgress * 100}%`,
-              transition: "width 100ms ease-out"
+              width: "0%"
             }} 
           />
           <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
@@ -493,11 +547,11 @@ export default function Day() {
           <div className={`absolute ${isDesktop ? "top-[4rem] ml-20" : "hidden"} rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
             {/* Progress fill */}
             <div 
+              ref={progressBarRef2}
               className="absolute inset-0 rounded-[10px]" 
               style={{ 
                 backgroundColor: "#97CEE7", 
-                width: `${scrollProgress * 100}%`,
-                transition: "width 100ms ease-out"
+                width: "0%"
               }} 
             />
             <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>

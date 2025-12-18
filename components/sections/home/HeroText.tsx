@@ -46,10 +46,10 @@ export default function HeroText() {
           isVisible && !isScrolled ? "opacity-100" : "opacity-0"
         }`}
       >
-        <h1 className="text-d-merriweather-24-bold mb-3 text-[var(--text-primary)]">
+        <h1 className="text-d-merriweather-32-regular mb-3 w-[350px] text-[var(--text-primary)]">
           AI ring to superpower your nervous system.
         </h1>
-        <p className="text-d-lato-20-regular text-[var(--text-primary)] mb-6">
+        <p className="text-d-lato-20-regular w-[300px] text-[var(--text-primary)] mb-6">
           Built to make you balanced without the effort.
         </p>
         <Link

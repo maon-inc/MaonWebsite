@@ -41,7 +41,7 @@ interface DotsSceneProps {
   /** Speed threshold for snap-to-home during lock; default 0 disables */
   snapSpeedPxPerSec?: number;
   /** Per-scene target anchor override. Default uses global DotsCanvas anchor */
-  targetAnchor?: "center" | "center-left" | "center-right" | "top-center" | "top-left" | "top-right" | "bottom-center" | "bottom-left" | "bottom-right";
+  targetAnchor?: "center" | "center-left" | "center-right" | "top-center" | "top-left" | "top-right" | "bottom-center" | "bottom-left" | "bottom-right" | "right-center";
   /** Optional fixed Y offset applied when fitting SVG points */
   targetOffsetY?: number;
   /**
