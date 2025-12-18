@@ -146,7 +146,7 @@ export async function samplePointsInFillFromPaths(
 ): Promise<Point[]> {
   if (paths.length === 0) return [];
 
-  const RASTER_WIDTH = 800;
+  const RASTER_WIDTH = 500;
   const RASTER_HEIGHT = Math.round((RASTER_WIDTH / viewBox.w) * viewBox.h);
   const ALPHA_THRESHOLD = 128;
 
