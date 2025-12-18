@@ -17,6 +17,46 @@ interface HowDotsProps {
 export default function HowDots({ activeIndex }: HowDotsProps) {
   const [activeSvgUrl, setActiveSvgUrl] = useState<string | null>(null);
   const prevSvgUrlRef = useRef<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  // Detect desktop vs mobile
+  useEffect(() => {
+    const mql = window.matchMedia
+      ? window.matchMedia("(min-width: 768px)")
+      : null;
+
+    const update = () => {
+      setIsDesktop(mql ? mql.matches : window.innerWidth >= 768);
+    };
+
+    update();
+
+    if (mql) {
+      if (typeof mql.addEventListener === "function") {
+        mql.addEventListener("change", update);
+      } else {
+        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
+          update
+        );
+      }
+    } else {
+      window.addEventListener("resize", update);
+    }
+
+    return () => {
+      if (mql) {
+        if (typeof mql.removeEventListener === "function") {
+          mql.removeEventListener("change", update);
+        } else {
+          (
+            mql as unknown as { removeListener?: (cb: () => void) => void }
+          ).removeListener?.(update);
+        }
+      } else {
+        window.removeEventListener("resize", update);
+      }
+    };
+  }, []);
 
   // Handle SVG transitions when activeIndex changes
   // Index 0 = scatter scene, indices 1-3 = SVGs
@@ -68,6 +108,9 @@ export default function HowDots({ activeIndex }: HowDotsProps) {
 
   if (!activeSvgUrl) return null;
 
+  const targetScale = isDesktop ? 0.8 : 0.6;
+  const targetAnchor = isDesktop ? "right-center" : "top-center";
+
   return (
     <DotsScene
       svgUrl={activeSvgUrl}
@@ -76,8 +119,8 @@ export default function HowDots({ activeIndex }: HowDotsProps) {
       dampingMult={0.85}
       maxSpeedMult={2.5}
       snapOnEnter
-      targetScale={0.8}
-      targetAnchor="right-center"
+      targetScale={targetScale}
+      targetAnchor={targetAnchor}
       lockInMs={150}
       homeSnapMs={100}
       swayRampMs={300}

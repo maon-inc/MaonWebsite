@@ -300,7 +300,13 @@ const MODE_PARAMS: Record<
 
 const MODE_TRANSITION_MS = 450;
 const BASE_MAX_SPEED_PX_PER_S = 1600;
-const SNAP_ON_ENTER_BURST_MS = 200;
+// Keep snap-on-enter "pop" subtle; big bursts read as an explosion.
+const SNAP_ON_ENTER_BURST_MS = 120;
+
+// Cap burst multipliers so we don't effectively square scene multipliers
+// (sceneMult * burstMult) into a huge impulse that looks like a scatter/explosion.
+const BURST_MAX_MULT = 1.6;
+const BURST_MIN_DAMPING_MULT = 0.95;
 
 // ============================================================================
 // DotsCanvas Component
@@ -1038,9 +1044,10 @@ export default function DotsCanvas({
         if (activeScene.snapOnEnter && (controllerChanged || providerKeyChanged)) {
           burstUntilRef.current = timeMs + SNAP_ON_ENTER_BURST_MS;
           burstSceneIdRef.current = blend.activeSceneId;
-          burstStiffnessMultRef.current = activeScene.stiffnessMult;
-          burstDampingMultRef.current = activeScene.dampingMult;
-          burstMaxSpeedMultRef.current = activeScene.maxSpeedMult;
+          // Use a small, capped burst boost (not scene multipliers again).
+          burstStiffnessMultRef.current = 1.25;
+          burstDampingMultRef.current = 1.0;
+          burstMaxSpeedMultRef.current = 1.25;
         }
 
         if (controllerChanged || providerKeyChanged) {
@@ -1130,9 +1137,18 @@ export default function DotsCanvas({
         if (activeId) {
           burstUntilRef.current = timeMs + opts.burstMs;
           burstSceneIdRef.current = activeId;
-          burstStiffnessMultRef.current = opts.stiffnessMult ?? 1;
-          burstDampingMultRef.current = opts.dampingMult ?? 1;
-          burstMaxSpeedMultRef.current = opts.maxSpeedMult ?? 1;
+          burstStiffnessMultRef.current = Math.min(
+            opts.stiffnessMult ?? 1,
+            BURST_MAX_MULT
+          );
+          burstDampingMultRef.current = Math.max(
+            opts.dampingMult ?? 1,
+            BURST_MIN_DAMPING_MULT
+          );
+          burstMaxSpeedMultRef.current = Math.min(
+            opts.maxSpeedMult ?? 1,
+            BURST_MAX_MULT
+          );
         }
       }
       const maybeStartLock = (sceneId: string | null, timeMs: number) => {

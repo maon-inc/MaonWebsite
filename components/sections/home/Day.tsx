@@ -114,7 +114,7 @@ function CrossfadeText({
   // Mobile: icon is fixed position, title and body flow with margin-top
   if (!isDesktop) {
     return (
-      <div className="relative text-center w-full" style={{ marginTop: "50vh" }}>
+      <div className="relative text-center w-full" style={{ marginTop: "56vh" }}>
         {/* Icon - fixed position at top of this container */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 flex justify-center"
@@ -257,6 +257,23 @@ export default function Day() {
   const autoScrollResetTimeoutRef = useRef<number | null>(null);
   const lastUserScrollRef = useRef<number>(0);
   const USER_SCROLL_PAUSE_MS = 2000; // pause auto-scroll for 2s after user scrolls
+
+  const scrollToStep = (index: number) => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) return;
+
+    const viewportH = scrollContainer.clientHeight;
+    const scrollStart = sectionTopRef.current;
+    const scrollRange = sectionHeightRef.current - viewportH;
+    if (scrollRange <= 0) return;
+
+    const clampedIndex = Math.max(0, Math.min(steps.length - 1, index));
+    // Scroll to the center of the segment for a stable "scene" position.
+    const targetProgress = (clampedIndex + 0.5) / steps.length;
+    const targetScrollY = scrollStart + targetProgress * scrollRange;
+
+    scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
+  };
 
   const isNearViewport = (scrollY: number, viewportH: number) => {
     const top = sectionTopRef.current;
@@ -624,7 +641,7 @@ export default function Day() {
       {/* Content in sticky container */}
       <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-start justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
         {/* Text box - fixed position on mobile, positioned above the icon */}
-        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[45vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[48vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
           {/* Progress fill */}
           <div 
             ref={progressBarRef1}
@@ -636,6 +653,32 @@ export default function Day() {
               willChange: "transform"
             }} 
           />
+          {/* Segment dividers (one per step) */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 rounded-[10px] pointer-events-none"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0.35) 1px, transparent 1px, transparent)",
+              backgroundSize: `calc(100% / ${steps.length}) 100%`,
+              opacity: 0.35,
+            }}
+          />
+          {/* Clickable segments */}
+          <div
+            className="absolute inset-0 z-30 grid"
+            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+          >
+            {steps.map((s, i) => (
+              <button
+                key={s.title + i}
+                type="button"
+                onClick={() => scrollToStep(i)}
+                className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                aria-label={`Go to step ${i + 1}: ${s.title}`}
+              />
+            ))}
+          </div>
           <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
         </div>
         <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-start"} px-6 md:px-12 lg:px-16 relative z-10 w-full`}>
@@ -652,6 +695,32 @@ export default function Day() {
                 willChange: "transform"
               }} 
             />
+            {/* Segment dividers (one per step) */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 rounded-[10px] pointer-events-none"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0.35) 1px, transparent 1px, transparent)",
+                backgroundSize: `calc(100% / ${steps.length}) 100%`,
+                opacity: 0.35,
+              }}
+            />
+            {/* Clickable segments */}
+            <div
+              className="absolute inset-0 z-30 grid"
+              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+            >
+              {steps.map((s, i) => (
+                <button
+                  key={s.title + i}
+                  type="button"
+                  onClick={() => scrollToStep(i)}
+                  className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                  aria-label={`Go to step ${i + 1}: ${s.title}`}
+                />
+              ))}
+            </div>
             <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
           </div>
           <CrossfadeText
@@ -660,32 +729,12 @@ export default function Day() {
             isDesktop={isDesktop}
             onPrev={() => {
               if (activeIndex > 0) {
-                const newIndex = activeIndex - 1;
-                const scrollContainer = getScrollContainer();
-                if (scrollContainer) {
-                  const viewportH = scrollContainer.clientHeight;
-                  const scrollStart = sectionTopRef.current;
-                  const scrollRange = sectionHeightRef.current - viewportH;
-                  // Calculate target scroll position (center of the step)
-                  const targetProgress = (newIndex + 0.5) / steps.length;
-                  const targetScrollY = scrollStart + (targetProgress * scrollRange);
-                  scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
-                }
+                scrollToStep(activeIndex - 1);
               }
             }}
             onNext={() => {
               if (activeIndex < steps.length - 1) {
-                const newIndex = activeIndex + 1;
-                const scrollContainer = getScrollContainer();
-                if (scrollContainer) {
-                  const viewportH = scrollContainer.clientHeight;
-                  const scrollStart = sectionTopRef.current;
-                  const scrollRange = sectionHeightRef.current - viewportH;
-                  // Calculate target scroll position (center of the step)
-                  const targetProgress = (newIndex + 0.5) / steps.length;
-                  const targetScrollY = scrollStart + (targetProgress * scrollRange);
-                  scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
-                }
+                scrollToStep(activeIndex + 1);
               }
             }}
           />
