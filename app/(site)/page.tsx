@@ -7,6 +7,7 @@ import Footer from "@/components/site/Footer";
 import Problem from "@/components/sections/home/Problem";
 import Intro from "@/components/sections/home/Intro";
 import Day from "@/components/sections/home/Day";
+import SaveSpot from "@/components/sections/home/SaveSpot";
 import DotsCanvas from "@/components/motion/DotsCanvas";
 import DotsScene from "@/components/motion/DotsScene";
 import { setScrollContainer, subscribe, getScrollContainer } from "@/motion/engine";
@@ -160,6 +161,16 @@ export default function HomePage() {
               <div ref={daySectionRef}>
                 <Day />
               </div>
+
+              <section className="relative grid h-[200vh]">
+                <div className="pointer-events-none col-start-1 row-start-1">
+                  <DotsScene dissipate className="h-[200vh]" morphSpeedMult={2} stiffnessMult={2} targetAnchor="center" />
+                </div>
+
+                <div className="sticky top-0 h-screen flex items-center justify-center col-start-1 row-start-1">
+                  <SaveSpot />
+                </div>
+              </section>
 
               {/* Footer - inside scrollable content, spans full width */}
               <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
