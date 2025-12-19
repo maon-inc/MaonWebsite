@@ -7,15 +7,28 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { getLocation } from "./getIpAddress";
 
+type FormStatus = "idle" | "loading" | "success" | "error_invalid_email" | "error_already_signed_up" | "error_generic";
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 export default function Waitlist() {
   const isDesktop = useIsDesktop();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<FormStatus>("idle");
   const addToWaitlist = useMutation(api.waitlist.addToWaitlist);
   const waitlistCount = useQuery(api.waitlist.getWaitlistCount);
 
   const handleSubmit = async () => {
     if (!email || status === "loading") return;
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      setStatus("error_invalid_email");
+      return;
+    }
     
     setStatus("loading");
     try {
@@ -27,10 +40,17 @@ export default function Waitlist() {
       });
       setStatus("success");
       setEmail("");
-    } catch {
-      setStatus("error");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("ALREADY_SIGNED_UP")) {
+        setStatus("error_already_signed_up");
+      } else {
+        setStatus("error_generic");
+      }
     }
   };
+
+  const isError = status.startsWith("error_");
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
@@ -127,7 +147,11 @@ export default function Waitlist() {
             type="email"
             placeholder="example@email.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              // Clear error when user starts typing
+              if (isError) setStatus("idle");
+            }}
             disabled={status === "loading" || status === "success"}
             className={`w-full md:w-[80%] px-6 py-3 bg-transparent outline-none ${
               isDesktop
@@ -136,8 +160,8 @@ export default function Waitlist() {
             } ${status === "loading" ? "opacity-50" : ""}`}
             style={{
               border: isDesktop
-                ? "2px solid var(--foreground)"
-                : "0.9px solid var(--foreground)",
+                ? `2px solid ${isError ? "#EF4444" : "var(--foreground)"}`
+                : `0.9px solid ${isError ? "#EF4444" : "var(--foreground)"}`,
             }}
           />
           <button
@@ -162,7 +186,13 @@ export default function Waitlist() {
               ? "You're on the list!" 
               : "Join the Waitlist"}
           </button>
-          {status === "error" && (
+          {status === "error_invalid_email" && (
+            <p className="text-red-500 text-sm">Please enter a valid email address.</p>
+          )}
+          {status === "error_already_signed_up" && (
+            <p className="text-red-500 text-sm">This email is already on the waitlist.</p>
+          )}
+          {status === "error_generic" && (
             <p className="text-red-500 text-sm">Something went wrong. Please try again.</p>
           )}
         </div>

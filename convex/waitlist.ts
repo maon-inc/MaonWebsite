@@ -8,9 +8,18 @@ export const addToWaitlist = mutation({
     region: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log("This TypeScript function is running on the server.");
+    // Check if email already exists
+    const existing = await ctx.db
+      .query("waitlist")
+      .filter((q) => q.eq(q.field("email"), args.email.toLowerCase()))
+      .first();
+
+    if (existing) {
+      throw new Error("ALREADY_SIGNED_UP");
+    }
+
     await ctx.db.insert("waitlist", {
-      email: args.email,
+      email: args.email.toLowerCase(),
       country: args.country,
       region: args.region,
     });
