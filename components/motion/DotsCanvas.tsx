@@ -208,7 +208,7 @@ function calculateTargetOffset(
     offsetY = (canvasHeight - targetHeight) / 2;
   } else if (anchor === "top-center") {
     // Center in upper portion, leaving room for bottom text
-    const upperRegion = canvasHeight * 0.75;
+    const upperRegion = canvasHeight * 0.65;
     offsetY = (upperRegion - targetHeight) / 2;
     // Bring down slightly
     offsetY += canvasHeight * 0.01;
