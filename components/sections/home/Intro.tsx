@@ -25,9 +25,15 @@ export default function Intro() {
             <br />
             Flow Ring
           </h2>
-          <p className="text-d-lato-24-regular md:text-d-lato-24-regular pb-2">
+          {/* Mobile copy */}
+          <p className="md:hidden text-d-lato-24-regular pb-2">
             When you feel off, we&apos;ll guide your body back to balance with
             subtle, intelligent haptic cues &amp; app limits.
+          </p>
+          {/* Desktop copy (unchanged) */}
+          <p className="hidden md:block text-d-lato-24-regular pb-2">
+            When you feel off, we&apos;ll guide your body back to balance with
+            passive interventions.
           </p>
           <a
             href="/how-it-works"
