@@ -100,16 +100,11 @@ export default function How({ onIndexChange, children }: HowProps) {
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
   const lastStepChangeRef = useRef<number>(0);
-  const STEP_CHANGE_COOLDOWN_MS = 200;
+  const STEP_CHANGE_COOLDOWN_MS = 100; // Reduced for better click responsiveness
   const pendingIndexRef = useRef<number | null>(null);
   const updateRafRef = useRef<number | null>(null);
   const lastScrollYRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
-  // Auto-scroll refs
-  const autoScrollRef = useRef<number | null>(null);
-  const isAutoScrollingRef = useRef(false);
-  const lastUserScrollRef = useRef<number>(0);
-  const USER_SCROLL_PAUSE_MS = 2000; // pause auto-scroll for 2s after user scrolls
 
   const scrollToStep = (index: number) => {
     const scrollContainer = getScrollContainer();
@@ -188,11 +183,6 @@ export default function How({ onIndexChange, children }: HowProps) {
     const unsubscribe = subscribe((state) => {
       const scrollVelocity = Math.abs(state.scrollY - lastScrollYRef.current);
       const now = performance.now();
-      
-      // Detect user scroll (not auto-scroll)
-      if (scrollVelocity > 2 && !isAutoScrollingRef.current) {
-        lastUserScrollRef.current = now;
-      }
       
       lastScrollYRef.current = state.scrollY;
       frameCountRef.current++;
@@ -283,49 +273,7 @@ export default function How({ onIndexChange, children }: HowProps) {
     };
   }, [onIndexChange]);
 
-  // Auto-scroll effect
-  useEffect(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
 
-    const autoScroll = () => {
-      const now = performance.now();
-      const timeSinceUserScroll = now - lastUserScrollRef.current;
-      
-      // Only auto-scroll if user hasn't scrolled recently
-      if (timeSinceUserScroll < USER_SCROLL_PAUSE_MS) {
-        autoScrollRef.current = requestAnimationFrame(autoScroll);
-        return;
-      }
-
-      const scrollStart = sectionTopRef.current;
-      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - scrollContainer.clientHeight;
-      const currentScroll = scrollContainer.scrollTop;
-
-      // Check if we're in the How section and not at the end
-      if (currentScroll >= scrollStart && currentScroll < scrollEnd) {
-        isAutoScrollingRef.current = true;
-        // Faster auto-scroll for mobile
-        const autoScrollSpeed = isDesktop ? 1.5 : 4.0;
-        scrollContainer.scrollTop = currentScroll + autoScrollSpeed;
-        // Reset flag after a short delay
-        setTimeout(() => {
-          isAutoScrollingRef.current = false;
-        }, 50);
-      }
-
-      autoScrollRef.current = requestAnimationFrame(autoScroll);
-    };
-
-    // Start auto-scroll loop
-    autoScrollRef.current = requestAnimationFrame(autoScroll);
-
-    return () => {
-      if (autoScrollRef.current !== null) {
-        cancelAnimationFrame(autoScrollRef.current);
-      }
-    };
-  }, []);
 
   return (
     <section ref={sectionRef} className="relative grid h-[600vh]">
@@ -380,14 +328,19 @@ export default function How({ onIndexChange, children }: HowProps) {
             {/* Clickable segments */}
             <div
               className="absolute inset-0 z-30 grid"
-              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, touchAction: "manipulation" }}
             >
               {steps.map((s, i) => (
                 <button
                   key={s.text + i}
                   type="button"
-                  onClick={() => scrollToStep(i)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    scrollToStep(i);
+                  }}
                   className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                  style={{ touchAction: "manipulation" }}
                   aria-label={`Go to step ${i + 1}: ${s.text}`}
                 />
               ))}
