@@ -211,7 +211,7 @@ function calculateTargetOffset(
     const upperRegion = canvasHeight * 0.75;
     offsetY = (upperRegion - targetHeight) / 2;
     // Bring down slightly
-    offsetY += canvasHeight * 0.01;
+    offsetY += canvasHeight * .005;
     offsetY = Math.max(30, offsetY);
   } else if (anchor.includes("top")) {
     offsetY = 0;

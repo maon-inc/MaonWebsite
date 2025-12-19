@@ -2,15 +2,11 @@
  
  import { useEffect, useRef } from "react";
  import { getScrollContainer, subscribe } from "@/motion/engine";
- import { measureElement } from "@/motion/measures";
- import { observeResize } from "@/motion/observe";
  import DotsScene from "@/components/motion/DotsScene";
  
  export default function DayAutoEffort() {
    const containerRef = useRef<HTMLDivElement>(null);
-   const sectionTopRef = useRef(0);
-   const sectionHeightRef = useRef(1);
-   const lastProgressRef = useRef(-1);
+   const sectionRef = useRef<HTMLElement | null>(null);
  
    const lineRef = useRef<HTMLParagraphElement>(null);
    const effortSpanRef = useRef<HTMLSpanElement>(null);
@@ -23,7 +19,7 @@
      const container = containerRef.current;
      if (!container) return;
  
-    const section = container.closest("section") as HTMLElement | null;
+    const section = sectionRef.current ?? (container.closest("section") as HTMLElement | null);
      if (!section) return;
  
     const parseCssColorToRgb = (value: string) => {
@@ -49,37 +45,54 @@
       return { r: 82, g: 82, b: 82 }; // --text-secondary default (#525252)
     };
 
+    const mix = (
+      a: { r: number; g: number; b: number },
+      b: { r: number; g: number; b: number },
+      t: number
+    ) => ({
+      r: a.r + (b.r - a.r) * t,
+      g: a.g + (b.g - a.g) * t,
+      b: a.b + (b.b - a.b) * t,
+    });
+
     const rootStyles = getComputedStyle(document.documentElement);
-    const from = parseCssColorToRgb(rootStyles.getPropertyValue("--text-secondary"));
+    // Start visibly "greyed out" (lighter than --text-secondary in light theme).
+    const baseGray = parseCssColorToRgb(
+      rootStyles.getPropertyValue("--dots-color-gray")
+    );
+    // Exaggerate: lift gray towards white so it reads clearly as "greyed out".
+    const fromFloat = mix(baseGray, { r: 255, g: 255, b: 255 }, 0.55);
+    const from = {
+      r: Math.round(fromFloat.r),
+      g: Math.round(fromFloat.g),
+      b: Math.round(fromFloat.b),
+    };
     const to = parseCssColorToRgb(rootStyles.getPropertyValue("--text-primary"));
     colorsRef.current = { from, to };
+    // Apply the starting color immediately (so it doesn't depend on scroll tick).
+    if (effortSpanRef.current) {
+      effortSpanRef.current.style.color = `rgb(${from.r}, ${from.g}, ${from.b})`;
+    }
 
-     const recompute = () => {
-       const { elementTop, elementHeight } = measureElement(
-         section,
-         getScrollContainer()
-       );
-       sectionTopRef.current = elementTop;
-       sectionHeightRef.current = Math.max(1, elementHeight);
-     };
- 
-     recompute();
-     const stopResize = observeResize(section, recompute);
- 
      const unsubscribe = subscribe((state) => {
+       const scrollContainer = getScrollContainer();
        const viewportH = state.viewportH;
-       const scrollStart = sectionTopRef.current;
-       const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
-       const scrollRange = scrollEnd - scrollStart;
  
-       if (scrollRange <= 0) return;
+       const rect = section.getBoundingClientRect();
+       const elementHeight = rect.height;
  
-       const raw = (state.scrollY - scrollStart) / scrollRange;
+       // Convert element top into the same coordinate space as state.scrollY.
+       let elementTop = rect.top + (scrollContainer ? 0 : window.scrollY);
+       if (scrollContainer) {
+         const rootRect = scrollContainer.getBoundingClientRect();
+         elementTop = rect.top - rootRect.top + scrollContainer.scrollTop;
+       }
+ 
+       const scrollRange = elementHeight - viewportH;
+       if (scrollRange <= 1) return;
+ 
+       const raw = (state.scrollY - elementTop) / scrollRange;
        const progress = Math.max(0, Math.min(1, raw));
- 
-       // Avoid extra DOM writes when progress doesn't change meaningfully.
-       if (Math.abs(progress - lastProgressRef.current) < 0.003) return;
-       lastProgressRef.current = progress;
  
        // Line fades in quickly at the start of this section.
        const lineT = Math.max(0, Math.min(1, progress / 0.12));
@@ -87,13 +100,14 @@
  
        // "without your effort" darkens much faster than Problem.tsx.
        // Darken over a short scroll window near the beginning so continued scroll resolves it fast.
-       const darkenStart = 0.08;
-       const darkenWindow = 0.16;
+      const darkenStart = 0.03;
+      const darkenWindow = 0.08;
        const t = Math.max(
          0,
          Math.min(1, (progress - darkenStart) / Math.max(1e-6, darkenWindow))
        );
-       const eased = 1 - (1 - t) * (1 - t); // easeOutQuad
+      // Exaggerate: stronger ease so it "snaps" darker quickly as you scroll.
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
       const colors = colorsRef.current;
       if (effortSpanRef.current && colors) {
         const r = Math.round(colors.from.r + (colors.to.r - colors.from.r) * eased);
@@ -104,13 +118,12 @@
      });
  
      return () => {
-       stopResize();
        unsubscribe();
      };
    }, []);
  
    return (
-     <section className="relative grid h-[200vh]">
+    <section ref={sectionRef} className="relative grid h-[200vh]">
        <div className="pointer-events-none col-start-1 row-start-1">
          <DotsScene scatter className="h-[200vh]" morphSpeedMult={2} />
        </div>
@@ -128,7 +141,7 @@
                style={{ opacity: 0 }}
              >
                all of this happens automatically,{" "}
-               <span ref={effortSpanRef} style={{ color: "var(--text-secondary)" }}>
+               <span ref={effortSpanRef} style={{ color: "var(--dots-color-gray)" }}>
                  without your effort
                </span>
                .
