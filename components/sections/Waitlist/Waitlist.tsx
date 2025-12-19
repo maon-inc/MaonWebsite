@@ -2,9 +2,30 @@
 
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import Link from "next/link";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useState } from "react";
+import { getIpAddress } from "./getIpAddress";
 
 export default function Waitlist() {
   const isDesktop = useIsDesktop();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const addToWaitlist = useMutation(api.waitlist.addToWaitlist);
+
+  const handleSubmit = async () => {
+    if (!email || status === "loading") return;
+    
+    setStatus("loading");
+    try {
+      const ipAddress = await getIpAddress();
+      await addToWaitlist({ email, ipAddress });
+      setStatus("success");
+      setEmail("");
+    } catch {
+      setStatus("error");
+    }
+  };
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
@@ -79,11 +100,14 @@ export default function Waitlist() {
           <input
             type="email"
             placeholder="example@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={status === "loading" || status === "success"}
             className={`w-full md:w-[80%] px-6 py-3 bg-transparent outline-none ${
               isDesktop
                 ? "text-d-lato-20-bold rounded-[20px]"
                 : "text-m-lato-14-bold rounded-[10px]"
-            }`}
+            } ${status === "loading" ? "opacity-50" : ""}`}
             style={{
               border: isDesktop
                 ? "2px solid var(--foreground)"
@@ -92,20 +116,29 @@ export default function Waitlist() {
           />
           <button
             type="button"
+            onClick={handleSubmit}
+            disabled={status === "loading" || status === "success"}
             className={`w-full md:w-[80%] px-6 py-3 ${
               isDesktop
                 ? "text-d-lato-20-bold rounded-[20px]"
                 : "text-m-lato-12-bold rounded-[10px]"
-            }`}
+            } ${status === "loading" ? "opacity-50" : ""}`}
             style={{
-              backgroundColor: "#D1EBF7",
+              backgroundColor: status === "success" ? "#A8E6CF" : "#D1EBF7",
               border: isDesktop
                 ? "2px solid var(--foreground)"
                 : "0.9px solid var(--foreground)",
             }}
           >
-            Join the Waitlist
+            {status === "loading" 
+              ? "Joining..." 
+              : status === "success" 
+              ? "You're on the list!" 
+              : "Join the Waitlist"}
           </button>
+          {status === "error" && (
+            <p className="text-red-500 text-sm">Something went wrong. Please try again.</p>
+          )}
         </div>
       </div>
     </div>

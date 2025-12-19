@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Lato, Merriweather } from "next/font/google";
 import "./globals.css";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 
 const lato = Lato({
   variable: "--font-lato",
@@ -40,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${lato.variable} ${merriweather.variable}`}>
       <body className="antialiased">
-        {children}
+        <ConvexClientProvider>{children}</ConvexClientProvider>
       </body>
     </html>
   );
