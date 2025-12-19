@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getScrollContainer, subscribe } from "@/motion/engine";
 import { measureElement } from "@/motion/measures";
 import { observeResize } from "@/motion/observe";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import Link from "next/link";
 
 interface Step {
@@ -90,7 +91,7 @@ interface HowProps {
 
 export default function How({ onIndexChange, children }: HowProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktop = useIsDesktop();
   const lastActiveIndexRef = useRef(0);
   const lastProgressRef = useRef(0);
   const progressRef = useRef(0);
@@ -101,8 +102,6 @@ export default function How({ onIndexChange, children }: HowProps) {
   const sectionHeightRef = useRef(1);
   const lastStepChangeRef = useRef<number>(0);
   const STEP_CHANGE_COOLDOWN_MS = 100; // Reduced for better click responsiveness
-  const pendingIndexRef = useRef<number | null>(null);
-  const updateRafRef = useRef<number | null>(null);
   const lastScrollYRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
 
@@ -122,44 +121,6 @@ export default function How({ onIndexChange, children }: HowProps) {
 
     scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
   };
-
-  useEffect(() => {
-    const mql = window.matchMedia
-      ? window.matchMedia("(min-width: 768px)")
-      : null;
-
-    const update = () => {
-      setIsDesktop(mql ? mql.matches : window.innerWidth >= 768);
-    };
-
-    update();
-
-    if (mql) {
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", update);
-      } else {
-        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
-          update
-        );
-      }
-    } else {
-      window.addEventListener("resize", update);
-    }
-
-    return () => {
-      if (mql) {
-        if (typeof mql.removeEventListener === "function") {
-          mql.removeEventListener("change", update);
-        } else {
-          (
-            mql as unknown as { removeListener?: (cb: () => void) => void }
-          ).removeListener?.(update);
-        }
-      } else {
-        window.removeEventListener("resize", update);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;

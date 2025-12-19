@@ -291,6 +291,21 @@ export function clearSvgCaches(): void {
 }
 
 /**
+ * Style attributes to copy from shape elements to their path equivalents
+ */
+const STYLE_ATTRS = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
+
+/**
+ * Copy style attributes from one SVG element to another
+ */
+function copyStyleAttributes(from: SVGElement, to: SVGElement): void {
+  for (const attr of STYLE_ATTRS) {
+    const value = from.getAttribute(attr);
+    if (value) to.setAttribute(attr, value);
+  }
+}
+
+/**
  * Convert a <circle> element to an equivalent <path> element
  */
 function circleToPath(circle: SVGCircleElement, svg: SVGSVGElement): SVGPathElement {
@@ -306,13 +321,7 @@ function circleToPath(circle: SVGCircleElement, svg: SVGSVGElement): SVGPathElem
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  // Copy relevant attributes
-  const attrs = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = circle.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(circle, path);
 
   svg.appendChild(path);
   return path;
@@ -331,12 +340,7 @@ function ellipseToPath(ellipse: SVGEllipseElement, svg: SVGSVGElement): SVGPathE
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  const attrs = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = ellipse.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(ellipse, path);
 
   svg.appendChild(path);
   return path;
@@ -375,12 +379,7 @@ function rectToPath(rect: SVGRectElement, svg: SVGSVGElement): SVGPathElement {
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  const attrs = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = rect.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(rect, path);
 
   svg.appendChild(path);
   return path;
@@ -399,12 +398,7 @@ function lineToPath(line: SVGLineElement, svg: SVGSVGElement): SVGPathElement {
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  const attrs = ["stroke", "stroke-width", "opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = line.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(line, path);
 
   svg.appendChild(path);
   return path;
@@ -432,12 +426,7 @@ function polygonToPath(polygon: SVGPolygonElement, svg: SVGSVGElement): SVGPathE
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  const attrs = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = polygon.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(polygon, path);
 
   svg.appendChild(path);
   return path;
@@ -464,12 +453,7 @@ function polylineToPath(polyline: SVGPolylineElement, svg: SVGSVGElement): SVGPa
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
-
-  const attrs = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"];
-  for (const attr of attrs) {
-    const value = polyline.getAttribute(attr);
-    if (value) path.setAttribute(attr, value);
-  }
+  copyStyleAttributes(polyline, path);
 
   svg.appendChild(path);
   return path;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import HeroText from "@/components/sections/home/HeroText";
 import Nav from "@/components/site/Nav";
 import Footer from "@/components/site/Footer";
@@ -13,67 +13,32 @@ import DotsCanvas from "@/components/motion/DotsCanvas";
 import DotsScene from "@/components/motion/DotsScene";
 import { setScrollContainer, subscribe, getScrollContainer } from "@/motion/engine";
 import { measureElement } from "@/motion/measures";
-
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function HomePage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const daySectionRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [dotCount, setDotCount] = useState(100);
   const [shouldHideNav, setShouldHideNav] = useState(false);
+  
+  const isDesktop = useIsDesktop();
+  const isMobile = !isDesktop;
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  
   const setScrollEl = useCallback((node: HTMLDivElement | null) => {
     scrollContainerRef.current = node;
     setScrollContainer(node);
   }, []);
 
-  useIsomorphicLayoutEffect(() => {
-    const getPrefersReducedMotion = () =>
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-
-    const getSaveData = () =>
-      (navigator as unknown as { connection?: { saveData?: boolean } })
-        .connection?.saveData === true;
-
-    const recompute = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-
-      const isLowPower = getPrefersReducedMotion() || mobile || getSaveData();
-      setDotCount(isLowPower ? 700 : 1000);
-    };
-
-    recompute();
-
-    window.addEventListener("resize", recompute);
-
-    const mql = window.matchMedia
-      ? window.matchMedia("(prefers-reduced-motion: reduce)")
-      : null;
-    if (mql) {
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", recompute);
-      } else {
-        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
-          recompute
-        );
-      }
-    }
-
-    return () => {
-      window.removeEventListener("resize", recompute);
-      if (mql) {
-        if (typeof mql.removeEventListener === "function") {
-          mql.removeEventListener("change", recompute);
-        } else {
-          (
-            mql as unknown as { removeListener?: (cb: () => void) => void }
-          ).removeListener?.(recompute);
-        }
-      }
-    };
-  }, []);
+  // Compute dot count based on device capabilities
+  const dotCount = (() => {
+    // Check for save-data preference (must be done carefully for SSR)
+    const saveData = typeof navigator !== "undefined" && 
+      (navigator as unknown as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    
+    const isLowPower = prefersReducedMotion || isMobile || saveData;
+    return isLowPower ? 700 : 1000;
+  })();
 
   // Track when Day section is visible to hide nav
   useEffect(() => {
@@ -84,7 +49,7 @@ export default function HomePage() {
       const scrollContainer = getScrollContainer();
       if (!scrollContainer) return;
 
-      const { elementTop, elementHeight } = measureElement(daySection, scrollContainer);
+      const { elementTop } = measureElement(daySection, scrollContainer);
       const daySectionStart = elementTop;
       const scrollY = state.scrollY;
       

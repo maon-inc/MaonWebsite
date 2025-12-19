@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import DotsScene from "@/components/motion/DotsScene";
 import { retargetToSvg } from "@/components/motion/DotsCanvas";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 const svgUrls = [
   "/assets/how_it_works/1.svg",
@@ -17,46 +18,7 @@ interface HowDotsProps {
 export default function HowDots({ activeIndex }: HowDotsProps) {
   const [activeSvgUrl, setActiveSvgUrl] = useState<string | null>(null);
   const prevSvgUrlRef = useRef<string | null>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  // Detect desktop vs mobile
-  useEffect(() => {
-    const mql = window.matchMedia
-      ? window.matchMedia("(min-width: 768px)")
-      : null;
-
-    const update = () => {
-      setIsDesktop(mql ? mql.matches : window.innerWidth >= 768);
-    };
-
-    update();
-
-    if (mql) {
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", update);
-      } else {
-        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
-          update
-        );
-      }
-    } else {
-      window.addEventListener("resize", update);
-    }
-
-    return () => {
-      if (mql) {
-        if (typeof mql.removeEventListener === "function") {
-          mql.removeEventListener("change", update);
-        } else {
-          (
-            mql as unknown as { removeListener?: (cb: () => void) => void }
-          ).removeListener?.(update);
-        }
-      } else {
-        window.removeEventListener("resize", update);
-      }
-    };
-  }, []);
+  const isDesktop = useIsDesktop();
 
   // Handle SVG transitions when activeIndex changes
   // Index 0 = scatter scene, indices 1-3 = SVGs

@@ -5,6 +5,7 @@ import { getScrollContainer, subscribe } from "@/motion/engine";
 import { observeResize } from "@/motion/observe";
 import DotsScene from "@/components/motion/DotsScene";
 import { retargetToSvg } from "@/components/motion/DotsCanvas";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 interface Step {
   svgUrl: string;
@@ -64,20 +65,14 @@ const steps: Step[] = [
   },
 ];
 
-const svgUrls = steps.map((s) => s.svgUrl);
-
 function CrossfadeText({
   steps,
   activeIndex,
   isDesktop,
-  onPrev,
-  onNext,
 }: {
   steps: Step[];
   activeIndex: number;
   isDesktop: boolean;
-  onPrev: () => void;
-  onNext: () => void;
 }) {
   const [displayIndex, setDisplayIndex] = useState(activeIndex);
   const [opacity, setOpacity] = useState(1);
@@ -242,7 +237,7 @@ function CrossfadeText({
 export default function Day() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeSvgUrl, setActiveSvgUrl] = useState(steps[0].svgUrl);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktop = useIsDesktop();
   const lastActiveIndexRef = useRef(0);
   const lastProgressRef = useRef(0);
   const progressRef = useRef(0);
@@ -257,9 +252,6 @@ export default function Day() {
   const sectionHeightRef = useRef(1);
   const lastStepChangeRef = useRef<number>(0);
   const STEP_CHANGE_COOLDOWN_MS = 100; // Reduced cooldown for better click responsiveness
-  // Add refs to track pending updates:
-  const pendingIndexRef = useRef<number | null>(null);
-  const updateRafRef = useRef<number | null>(null);
   // Add refs for frame skipping:
   const lastScrollYRef = useRef<number>(-1);
   const frameCountRef = useRef<number>(0);
@@ -346,44 +338,6 @@ export default function Day() {
         .then((res) => res.text())
         .catch(() => {}); // Ignore errors, just warm cache
     });
-  }, []);
-
-  useEffect(() => {
-    const mql = window.matchMedia
-      ? window.matchMedia("(min-width: 768px)")
-      : null;
-
-    const update = () => {
-      setIsDesktop(mql ? mql.matches : window.innerWidth >= 768);
-    };
-
-    update();
-
-    if (mql) {
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", update);
-      } else {
-        (
-          mql as unknown as { addListener?: (cb: () => void) => void }
-        ).addListener?.(update);
-      }
-    } else {
-      window.addEventListener("resize", update);
-    }
-
-    return () => {
-      if (mql) {
-        if (typeof mql.removeEventListener === "function") {
-          mql.removeEventListener("change", update);
-        } else {
-          (
-            mql as unknown as { removeListener?: (cb: () => void) => void }
-          ).removeListener?.(update);
-        }
-      } else {
-        window.removeEventListener("resize", update);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -701,16 +655,6 @@ export default function Day() {
             steps={steps}
             activeIndex={activeIndex}
             isDesktop={isDesktop}
-            onPrev={() => {
-              if (activeIndex > 0) {
-                scrollToStep(activeIndex - 1);
-              }
-            }}
-            onNext={() => {
-              if (activeIndex < steps.length - 1) {
-                scrollToStep(activeIndex + 1);
-              }
-            }}
           />
         </div>
       </div>

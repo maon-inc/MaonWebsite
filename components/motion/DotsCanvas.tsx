@@ -332,6 +332,7 @@ export default function DotsCanvas({
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const dotsRef = useRef<Dot[]>([]);
   const resizeRafRef = useRef<number | null>(null);
   const needsReinitRef = useRef(true);
@@ -386,6 +387,10 @@ export default function DotsCanvas({
   // Pre-parse colors (use fallbacks for initial SSR render)
   const grayRgbRef = useRef(hexToRgb(colorGray ?? CSS_FALLBACK_GRAY));
   const accentRgbRef = useRef(hexToRgb(colorAccent ?? CSS_FALLBACK_ACCENT));
+  
+  // Pre-computed color lookup table (256 entries for smooth gradients)
+  // Eliminates ~72,000 string allocations per second
+  const colorLUTRef = useRef<string[]>([]);
 
   // State
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -397,6 +402,19 @@ export default function DotsCanvas({
     const resolvedAccent = colorAccent ?? getCssVariable("--dots-color-accent", CSS_FALLBACK_ACCENT);
     grayRgbRef.current = hexToRgb(resolvedGray);
     accentRgbRef.current = hexToRgb(resolvedAccent);
+    
+    // Rebuild color LUT when colors change
+    const gray = grayRgbRef.current;
+    const accent = accentRgbRef.current;
+    const lut: string[] = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      const t = i / 255;
+      const r = Math.round(lerp(gray.r, accent.r, t));
+      const g = Math.round(lerp(gray.g, accent.g, t));
+      const b = Math.round(lerp(gray.b, accent.b, t));
+      lut[i] = `rgb(${r},${g},${b})`;
+    }
+    colorLUTRef.current = lut;
   }, [colorGray, colorAccent]);
 
   // -------------------------------------------------------------------------
@@ -424,6 +442,9 @@ export default function DotsCanvas({
     if (!ctx) return undefined;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    
+    // Cache the context for reuse in draw functions
+    ctxRef.current = ctx;
 
     setCanvasSize({ width, height });
     return { width, height, dpr };
@@ -1575,10 +1596,8 @@ export default function DotsCanvas({
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
     const width = canvas.width / dpr;
@@ -1635,10 +1654,18 @@ export default function DotsCanvas({
       const t = Math.min(dist / SETTLED_PX, 1);
       const easedT = easeOut(1 - t);
 
-      const r = Math.round(lerp(grayRgb.r, accentRgb.r, easedT));
-      const g = Math.round(lerp(grayRgb.g, accentRgb.g, easedT));
-      const b = Math.round(lerp(grayRgb.b, accentRgb.b, easedT));
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      // Use pre-computed color LUT to avoid string allocation
+      const colorLUT = colorLUTRef.current;
+      if (colorLUT.length > 0) {
+        const lutIndex = Math.round(easedT * 255);
+        ctx.fillStyle = colorLUT[lutIndex];
+      } else {
+        // Fallback if LUT not yet built
+        const r = Math.round(lerp(grayRgb.r, accentRgb.r, easedT));
+        const g = Math.round(lerp(grayRgb.g, accentRgb.g, easedT));
+        const b = Math.round(lerp(grayRgb.b, accentRgb.b, easedT));
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+      }
 
       let swayX: number;
       let swayY: number;
@@ -1698,9 +1725,8 @@ export default function DotsCanvas({
 
   const drawReducedMotion = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
     const width = canvas.width / dpr;

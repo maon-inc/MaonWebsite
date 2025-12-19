@@ -55,24 +55,38 @@
       b: a.b + (b.b - a.b) * t,
     });
 
-    const rootStyles = getComputedStyle(document.documentElement);
-    // Start visibly "greyed out" (lighter than --text-secondary in light theme).
-    const baseGray = parseCssColorToRgb(
-      rootStyles.getPropertyValue("--dots-color-gray")
-    );
-    // Exaggerate: lift gray towards white so it reads clearly as "greyed out".
-    const fromFloat = mix(baseGray, { r: 255, g: 255, b: 255 }, 0.55);
-    const from = {
-      r: Math.round(fromFloat.r),
-      g: Math.round(fromFloat.g),
-      b: Math.round(fromFloat.b),
+    // Function to read and compute colors from CSS variables
+    const updateColors = () => {
+      const rootStyles = getComputedStyle(document.documentElement);
+      // Start visibly "greyed out" (lighter than --text-secondary in light theme).
+      const baseGray = parseCssColorToRgb(
+        rootStyles.getPropertyValue("--dots-color-gray")
+      );
+      // Exaggerate: lift gray towards white so it reads clearly as "greyed out".
+      const fromFloat = mix(baseGray, { r: 255, g: 255, b: 255 }, 0.55);
+      const from = {
+        r: Math.round(fromFloat.r),
+        g: Math.round(fromFloat.g),
+        b: Math.round(fromFloat.b),
+      };
+      const to = parseCssColorToRgb(rootStyles.getPropertyValue("--text-primary"));
+      colorsRef.current = { from, to };
+      return { from, to };
     };
-    const to = parseCssColorToRgb(rootStyles.getPropertyValue("--text-primary"));
-    colorsRef.current = { from, to };
+
+    // Initial color setup
+    const { from } = updateColors();
     // Apply the starting color immediately (so it doesn't depend on scroll tick).
     if (effortSpanRef.current) {
       effortSpanRef.current.style.color = `rgb(${from.r}, ${from.g}, ${from.b})`;
     }
+    
+    // Listen for theme changes (color-scheme preference)
+    const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleColorSchemeChange = () => {
+      updateColors();
+    };
+    colorSchemeQuery.addEventListener("change", handleColorSchemeChange);
 
      const unsubscribe = subscribe((state) => {
        const scrollContainer = getScrollContainer();
@@ -119,6 +133,7 @@
  
      return () => {
        unsubscribe();
+       colorSchemeQuery.removeEventListener("change", handleColorSchemeChange);
      };
    }, []);
  

@@ -22,6 +22,8 @@ export function mapRange(
   outMin: number,
   outMax: number
 ): number {
+  // Guard against division by zero
+  if (inMax === inMin) return outMin;
   const t = (value - inMin) / (inMax - inMin);
   return lerp(outMin, outMax, t);
 }
