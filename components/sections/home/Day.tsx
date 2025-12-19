@@ -243,7 +243,7 @@ export default function Day() {
   const sectionTopRef = useRef(0);
   const sectionHeightRef = useRef(1);
   const lastStepChangeRef = useRef<number>(0);
-  const STEP_CHANGE_COOLDOWN_MS = 200; // Increased cooldown for stability
+  const STEP_CHANGE_COOLDOWN_MS = 100; // Reduced cooldown for better click responsiveness
   // Add refs to track pending updates:
   const pendingIndexRef = useRef<number | null>(null);
   const updateRafRef = useRef<number | null>(null);
@@ -251,12 +251,10 @@ export default function Day() {
   const lastScrollYRef = useRef<number>(-1);
   const frameCountRef = useRef<number>(0);
   const prevSvgUrlRef = useRef<string>(steps[0].svgUrl);
-  // Auto-scroll refs
-  const autoScrollRef = useRef<number | null>(null);
-  const isAutoScrollingRef = useRef(false);
-  const autoScrollResetTimeoutRef = useRef<number | null>(null);
-  const lastUserScrollRef = useRef<number>(0);
-  const USER_SCROLL_PAUSE_MS = 2000; // pause auto-scroll for 2s after user scrolls
+  const desiredSvgUrlRef = useRef<string>(steps[0].svgUrl);
+  const scrollIdleTimeoutRef = useRef<number | null>(null);
+  const SCROLL_IDLE_MS = 140;
+
 
   const scrollToStep = (index: number) => {
     const scrollContainer = getScrollContainer();
@@ -300,12 +298,27 @@ export default function Day() {
     });
   };
 
+  const scheduleSvgRetarget = () => {
+    if (scrollIdleTimeoutRef.current !== null) {
+      clearTimeout(scrollIdleTimeoutRef.current);
+    }
+
+    scrollIdleTimeoutRef.current = window.setTimeout(() => {
+      queueSvg(desiredSvgUrlRef.current);
+      scrollIdleTimeoutRef.current = null;
+    }, SCROLL_IDLE_MS);
+  };
+
   useEffect(() => {
     return () => {
       if (flushSvgRafRef.current !== null) {
         cancelAnimationFrame(flushSvgRafRef.current);
       }
       pendingSvgRef.current = null;
+      if (scrollIdleTimeoutRef.current !== null) {
+        clearTimeout(scrollIdleTimeoutRef.current);
+        scrollIdleTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -388,11 +401,6 @@ export default function Day() {
       const scrollVelocity = Math.abs(y - lastY);
       const now = performance.now();
       
-      // Detect user scroll (not auto-scroll)
-      if (scrollVelocity > 2 && !isAutoScrollingRef.current) {
-        lastUserScrollRef.current = now;
-      }
-      
       frameCountRef.current++;
 
       // During rapid scrolling, process fewer frames but always update progress
@@ -411,7 +419,8 @@ export default function Day() {
         if (lastActiveIndexRef.current !== 0) {
           lastActiveIndexRef.current = 0;
           setActiveIndex(0);
-          queueSvg(steps[0].svgUrl);
+          desiredSvgUrlRef.current = steps[0].svgUrl;
+          scheduleSvgRetarget();
         }
         return;
       }
@@ -476,7 +485,8 @@ export default function Day() {
         
         // Update immediately without RAF batching for responsiveness
         setActiveIndex(nextIndex);
-        queueSvg(steps[nextIndex].svgUrl);
+        desiredSvgUrlRef.current = steps[nextIndex].svgUrl;
+        scheduleSvgRetarget();
       }
     });
 
@@ -486,107 +496,7 @@ export default function Day() {
     };
   }, []);
 
-  // Auto-scroll effect
-  useEffect(() => {
-    const scrollContainer = getScrollContainer();
-    if (!scrollContainer) return;
 
-    const clearAutoScrollTimeout = () => {
-      if (autoScrollResetTimeoutRef.current !== null) {
-        clearTimeout(autoScrollResetTimeoutRef.current);
-        autoScrollResetTimeoutRef.current = null;
-      }
-    };
-
-    const stopAutoScrollLoop = () => {
-      if (autoScrollRef.current !== null) {
-        cancelAnimationFrame(autoScrollRef.current);
-        autoScrollRef.current = null;
-      }
-      clearAutoScrollTimeout();
-      isAutoScrollingRef.current = false;
-    };
-
-    const autoScroll = () => {
-      const viewportH = scrollContainer.clientHeight;
-      const scrollStart = sectionTopRef.current;
-      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
-      const currentScroll = scrollContainer.scrollTop;
-      const nearViewport = isNearViewport(currentScroll, viewportH);
-      const inSection = currentScroll >= scrollStart && currentScroll < scrollEnd;
-
-      if (!nearViewport && !inSection) {
-        stopAutoScrollLoop();
-        return;
-      }
-
-      const now = performance.now();
-      const timeSinceUserScroll = now - lastUserScrollRef.current;
-      
-      // Only auto-scroll if user hasn't scrolled recently
-      if (timeSinceUserScroll < USER_SCROLL_PAUSE_MS) {
-        autoScrollRef.current = requestAnimationFrame(autoScroll);
-        return;
-      }
-
-      // Check if we're in the Day section and not at the end
-      if (inSection) {
-        isAutoScrollingRef.current = true;
-        // Faster auto-scroll for mobile
-        const autoScrollSpeed = isDesktop ? 1.5 : 4.0;
-        scrollContainer.scrollTop = currentScroll + autoScrollSpeed;
-        // Reset flag after a short delay
-        clearAutoScrollTimeout();
-        autoScrollResetTimeoutRef.current = window.setTimeout(() => {
-          isAutoScrollingRef.current = false;
-          autoScrollResetTimeoutRef.current = null;
-        }, 50);
-      }
-
-      autoScrollRef.current = requestAnimationFrame(autoScroll);
-    };
-
-    const ensureAutoScroll = () => {
-      if (autoScrollRef.current !== null) return;
-      const viewportH = scrollContainer.clientHeight;
-      const scrollStart = sectionTopRef.current;
-      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
-      const currentScroll = scrollContainer.scrollTop;
-      const inSection = currentScroll >= scrollStart && currentScroll < scrollEnd;
-      if (isNearViewport(currentScroll, viewportH) || inSection) {
-        autoScrollRef.current = requestAnimationFrame(autoScroll);
-      }
-    };
-
-    const handleScroll = () => {
-      const viewportH = scrollContainer.clientHeight;
-      const scrollStart = sectionTopRef.current;
-      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
-      const currentScroll = scrollContainer.scrollTop;
-      const inSection = currentScroll >= scrollStart && currentScroll < scrollEnd;
-
-      if (!isNearViewport(currentScroll, viewportH) && !inSection) {
-        stopAutoScrollLoop();
-        return;
-      }
-
-      ensureAutoScroll();
-    };
-
-    const handleResize = () => {
-      ensureAutoScroll();
-    };
-
-    ensureAutoScroll();
-    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      stopAutoScrollLoop();
-      scrollContainer.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   // Add separate effect for SVG retargeting:
   useEffect(() => {
@@ -595,22 +505,25 @@ export default function Day() {
       prevSvgUrlRef.current = activeSvgUrl;
       
       retargetToSvg(activeSvgUrl, goingUp ? "snap" : "soft", {
-        burstMs: 150,
-        stiffnessMult: 3.0,
-        dampingMult: 0.92,
-        maxSpeedMult: 2.2,
+        // Note: opts are capped in DotsCanvas (stiffness/maxSpeed <= 1.6, damping >= 0.95)
+        // so we set them to the effective max for a quicker snap.
+        burstMs: 260,
+        stiffnessMult: 1.6,
+        dampingMult: 0.95,
+        maxSpeedMult: 1.6,
       });
     }
   }, [activeSvgUrl, activeIndex]);
 
   const svgScale = isDesktop ? 1.5 : 1.1;
   const dotAnchor = isDesktop ? "bottom-right" : "top-center";
-  const lockInMs = isDesktop ? 300 : 200;
-  const homeSnapMs = isDesktop ? 200 : 150;
-  const swayRampMs = isDesktop ? 600 : 500;
+  // Faster snap: longer lock/force-home window + higher snap thresholds.
+  const lockInMs = isDesktop ? 320 : 260;
+  const homeSnapMs = isDesktop ? 260 : 220;
+  const swayRampMs = isDesktop ? 260 : 220;
   const settleRadiusPx = isDesktop ? 10 : 8;
-  const snapRadiusPx = isDesktop ? 12 : 10;
-  const snapSpeedPxPerSec = isDesktop ? 450 : 400;
+  const snapRadiusPx = isDesktop ? 22 : 18;
+  const snapSpeedPxPerSec = isDesktop ? 1400 : 1200;
   const targetOffsetY = isDesktop ? -100 : -80;
 
   return (
@@ -667,14 +580,19 @@ export default function Day() {
           {/* Clickable segments */}
           <div
             className="absolute inset-0 z-30 grid"
-            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, touchAction: "manipulation" }}
           >
             {steps.map((s, i) => (
               <button
                 key={s.title + i}
                 type="button"
-                onClick={() => scrollToStep(i)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  scrollToStep(i);
+                }}
                 className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                style={{ touchAction: "manipulation" }}
                 aria-label={`Go to step ${i + 1}: ${s.title}`}
               />
             ))}
@@ -709,14 +627,19 @@ export default function Day() {
             {/* Clickable segments */}
             <div
               className="absolute inset-0 z-30 grid"
-              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, touchAction: "manipulation" }}
             >
               {steps.map((s, i) => (
                 <button
                   key={s.title + i}
                   type="button"
-                  onClick={() => scrollToStep(i)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    scrollToStep(i);
+                  }}
                   className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                  style={{ touchAction: "manipulation" }}
                   aria-label={`Go to step ${i + 1}: ${s.title}`}
                 />
               ))}

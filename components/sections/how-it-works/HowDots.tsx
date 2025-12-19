@@ -84,10 +84,12 @@ export default function HowDots({ activeIndex }: HowDotsProps) {
       setActiveSvgUrl(svgUrl);
 
       retargetToSvg(svgUrl, goingUp ? "snap" : "soft", {
-        burstMs: 100,
-        stiffnessMult: 3.5,
-        dampingMult: 0.88,
-        maxSpeedMult: 2.5,
+        // Note: opts are capped in DotsCanvas (stiffness/maxSpeed <= 1.6, damping >= 0.95)
+        // so we set them to the effective max for a quicker snap.
+        burstMs: 220,
+        stiffnessMult: 1.6,
+        dampingMult: 0.95,
+        maxSpeedMult: 1.6,
       });
     }
   }, [activeIndex]);
@@ -121,14 +123,15 @@ export default function HowDots({ activeIndex }: HowDotsProps) {
       snapOnEnter
       targetScale={targetScale}
       targetAnchor={targetAnchor}
-      lockInMs={150}
-      homeSnapMs={100}
-      swayRampMs={300}
+      // Faster snap: longer lock/force-home window + higher snap thresholds.
+      lockInMs={240}
+      homeSnapMs={200}
+      swayRampMs={160}
       morphSpeedMult={6.0}
       swayStyle="targetOffset"
-      settleRadiusPx={8}
-      snapRadiusPx={10}
-      snapSpeedPxPerSec={450}
+      settleRadiusPx={10}
+      snapRadiusPx={18}
+      snapSpeedPxPerSec={1400}
     />
   );
 }

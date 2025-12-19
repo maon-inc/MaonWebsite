@@ -111,6 +111,23 @@ export default function How({ onIndexChange, children }: HowProps) {
   const lastUserScrollRef = useRef<number>(0);
   const USER_SCROLL_PAUSE_MS = 2000; // pause auto-scroll for 2s after user scrolls
 
+  const scrollToStep = (index: number) => {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) return;
+
+    const viewportH = scrollContainer.clientHeight;
+    const scrollStart = sectionTopRef.current;
+    const scrollRange = sectionHeightRef.current - viewportH;
+    if (scrollRange <= 0) return;
+
+    const clampedIndex = Math.max(0, Math.min(steps.length - 1, index));
+    // Scroll to the center of the segment for a stable "scene" position.
+    const targetProgress = (clampedIndex + 0.5) / steps.length;
+    const targetScrollY = scrollStart + targetProgress * scrollRange;
+
+    scrollContainer.scrollTo({ top: targetScrollY, behavior: "smooth" });
+  };
+
   useEffect(() => {
     const mql = window.matchMedia
       ? window.matchMedia("(min-width: 768px)")
@@ -345,9 +362,36 @@ export default function How({ onIndexChange, children }: HowProps) {
               className="absolute inset-0 rounded-[10px]" 
               style={{ 
                 backgroundColor: "#97CEE7", 
-                width: "0%"
+                width: "0%",
+                willChange: "width",
               }} 
             />
+            {/* Segment dividers (one per step) */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 rounded-[10px] pointer-events-none"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0.35) 1px, transparent 1px, transparent)",
+                backgroundSize: `calc(100% / ${steps.length}) 100%`,
+                opacity: 0.35,
+              }}
+            />
+            {/* Clickable segments */}
+            <div
+              className="absolute inset-0 z-30 grid"
+              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+            >
+              {steps.map((s, i) => (
+                <button
+                  key={s.text + i}
+                  type="button"
+                  onClick={() => scrollToStep(i)}
+                  className="h-full w-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-black/60"
+                  aria-label={`Go to step ${i + 1}: ${s.text}`}
+                />
+              ))}
+            </div>
             <p className="relative text-[14px] font-[var(--font-sans)]">HOW IT WORKS</p>
           </div>
           <CrossfadeText
