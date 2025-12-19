@@ -28,7 +28,7 @@ export default function HowItWorksPage() {
           <div className="relative z-10 flex h-screen">
             <div
               ref={setScrollEl}
-              className="flex-1 overflow-y-auto hide-scrollbar"
+              className="flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar"
             >
               <How onIndexChange={setActiveIndex}>
                 <HowDots activeIndex={activeIndex} />
@@ -44,10 +44,8 @@ export default function HowItWorksPage() {
                 </div>
               </section>
 
-              {/* Footer - inside scrollable content, spans full width */}
-              <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-                <Footer />
-              </div>
+              {/* Footer - inside scrollable content */}
+              <Footer />
             </div>
           </div>
         </main>

@@ -7,6 +7,7 @@ import Footer from "@/components/site/Footer";
 import Problem from "@/components/sections/home/Problem";
 import Intro from "@/components/sections/home/Intro";
 import Day from "@/components/sections/home/Day";
+import DayAutoEffort from "@/components/sections/home/DayAutoEffort";
 import SaveSpot from "@/components/sections/home/SaveSpot";
 import DotsCanvas from "@/components/motion/DotsCanvas";
 import DotsScene from "@/components/motion/DotsScene";
@@ -116,7 +117,7 @@ export default function HomePage() {
             {/* Left column: Scrollable content */}
             <div
               ref={setScrollEl}
-              className="flex-1 overflow-y-auto hide-scrollbar"
+              className="flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar"
             >
               <DotsScene
                 svgUrl="/assets/hero_svg.svg"
@@ -162,6 +163,8 @@ export default function HomePage() {
                 <Day />
               </div>
 
+              <DayAutoEffort />
+
               <section className="relative grid h-[200vh]">
                 <div className="pointer-events-none col-start-1 row-start-1">
                   <DotsScene dissipate className="h-[200vh]" morphSpeedMult={2} stiffnessMult={2} targetAnchor="center" />
@@ -172,10 +175,8 @@ export default function HomePage() {
                 </div>
               </section>
 
-              {/* Footer - inside scrollable content, spans full width */}
-              <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-                <Footer />
-              </div>
+              {/* Footer - inside scrollable content */}
+              <Footer />
             </div>
 
             {/* Right column: Fixed Nav (doesn't scroll) - hidden on mobile and when past Day section */}
