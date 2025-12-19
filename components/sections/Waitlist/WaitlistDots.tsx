@@ -18,19 +18,11 @@ export default function WaitlistDots({ children }: WaitlistDotsProps) {
       svgUrl="/assets/hero_svg.svg"
       className="relative min-h-screen"
       scrollStartOffset={-200}
-      morphSpeedMult={6}
-      stiffnessMult={4.5}
-      dampingMult={0.85}
-      maxSpeedMult={2.5}
+      morphSpeedMult={2}
+      stiffnessMult={2}
       snapOnEnter
       targetAnchor={targetAnchor}
       targetScale={targetScale}
-      lockInMs={240}
-      homeSnapMs={200}
-      swayRampMs={160}
-      settleRadiusPx={10}
-      snapRadiusPx={18}
-      snapSpeedPxPerSec={1400}
     >
       {children}
     </DotsScene>

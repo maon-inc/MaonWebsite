@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const addToWaitlist = mutation({
@@ -15,4 +15,12 @@ export const addToWaitlist = mutation({
       region: args.region,
     });
   },
-})
+});
+
+export const getWaitlistCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const allEntries = await ctx.db.query("waitlist").collect();
+    return allEntries.length;
+  },
+});

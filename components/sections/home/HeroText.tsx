@@ -72,7 +72,7 @@ export default function HeroText() {
           Built to make you balanced without the effort.
         </p>
         <Link
-          href="/preorder"
+          href="/waitlist"
           className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black"
           style={{
             border: "0.9px solid black",

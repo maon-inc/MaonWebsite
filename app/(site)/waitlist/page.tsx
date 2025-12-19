@@ -7,7 +7,13 @@ export const dynamic = "force-dynamic";
 
 export default function WaitlistPage() {
   return (
-    <DotsCanvas count={1200} colorAccent="#97CEE7">
+    <DotsCanvas
+      count={1200}
+      colorAccent="#97CEE7"
+      initialDurationMs={1500}
+      transitionDurationMs={500}
+      morphSpeed={0.4}
+    >
       <WaitlistDots>
         <Waitlist />
       </WaitlistDots>

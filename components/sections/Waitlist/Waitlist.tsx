@@ -2,7 +2,7 @@
 
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import Link from "next/link";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { getLocation } from "./getIpAddress";
@@ -12,6 +12,7 @@ export default function Waitlist() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const addToWaitlist = useMutation(api.waitlist.addToWaitlist);
+  const waitlistCount = useQuery(api.waitlist.getWaitlistCount);
 
   const handleSubmit = async () => {
     if (!email || status === "loading") return;
@@ -46,6 +47,27 @@ export default function Waitlist() {
         />
       </Link>
 
+      {/* Fixed waitlist count */}
+      {waitlistCount !== undefined && (
+        <div
+          className={`fixed z-40 px-4 py-2 left-1/2 -translate-x-1/2 ${
+            isDesktop
+              ? "text-d-lato-20-regular top-8"
+              : "text-m-lato-14-regular top-14"
+          }`}
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "15px",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          <span style={{ color: "#0B79AA" }}>
+            <span style={{ fontWeight: "bold" }}>{waitlistCount}</span> people
+          </span>{" "}
+          <span style={{ color: "#000000" }}> signed up</span>
+        </div>
+      )}
+
       {/* Content container - positioned based on device */}
       <div
         className={`flex flex-col ${
@@ -70,7 +92,7 @@ export default function Waitlist() {
           className={`opacity-50 mt-4 ${
             isDesktop
               ? "text-d-lato-24-regular max-w-[500px]"
-              : "text-m-lato-14-regular"
+              : "text-m-lato-16-regular"
           }`}
         >
           Smart ring that monitors your body&apos;s signals and delivers timely
@@ -81,14 +103,14 @@ export default function Waitlist() {
         <div className="mt-4 md:mt-8">
           <p
             className={
-              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-14-italic"
+              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-16-italic"
             }
           >
             <span className="font-bold not-italic">Preorder</span> June 2026
           </p>
           <p
             className={
-              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-14-italic"
+              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-16-italic"
             }
           >
             <span className="font-bold not-italic">Launch</span> December 2026
@@ -97,7 +119,7 @@ export default function Waitlist() {
 
         {/* Email form */}
         <div
-          className={`mt-4 md:mt-8 flex flex-col gap-4 ${
+          className={`mt-6 md:mt-8 flex flex-col gap-4 ${
             isDesktop ? "w-[70vw] max-w-[600px]" : "w-full"
           }`}
         >
