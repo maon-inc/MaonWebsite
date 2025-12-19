@@ -1,3 +1,5 @@
-export default function PrivacyPage() {
-  return <div>Privacy Policy</div>;
+import PrivacyPolicy from "@/components/sections/privacy/PrivacyPolicy";
+
+export default function PrivacyPolicyPage() {
+  return <PrivacyPolicy />;
 }
