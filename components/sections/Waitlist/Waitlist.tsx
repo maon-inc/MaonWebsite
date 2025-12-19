@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { getIpAddress } from "./getIpAddress";
+import { getLocation } from "./getIpAddress";
 
 export default function Waitlist() {
   const isDesktop = useIsDesktop();
@@ -18,8 +18,12 @@ export default function Waitlist() {
     
     setStatus("loading");
     try {
-      const ipAddress = await getIpAddress();
-      await addToWaitlist({ email, ipAddress });
+      const location = await getLocation();
+      await addToWaitlist({ 
+        email, 
+        country: location.country,
+        region: location.region,
+      });
       setStatus("success");
       setEmail("");
     } catch {

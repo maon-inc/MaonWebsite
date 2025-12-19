@@ -1,10 +1,21 @@
-export async function getIpAddress(): Promise<string> {
+export interface LocationData {
+  country: string;
+  region: string;
+}
+
+export async function getLocation(): Promise<LocationData> {
   try {
-    const response = await fetch("https://api.ipify.org?format=json");
-    if (!response.ok) return "";
+    // Using ipapi.co for free IP geolocation (no API key required for basic usage)
+    const response = await fetch("https://ipapi.co/json/");
+    if (!response.ok) {
+      return { country: "", region: "" };
+    }
     const data = await response.json();
-    return data.ip ?? "";
+    return {
+      country: data.country_name ?? data.country ?? "",
+      region: data.region ?? data.region_code ?? "",
+    };
   } catch {
-    return "";
+    return { country: "", region: "" };
   }
 }
