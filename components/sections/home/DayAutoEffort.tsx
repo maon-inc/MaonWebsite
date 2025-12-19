@@ -155,7 +155,7 @@
                className="text-m-merriweather-30-regular text-[var(--text-primary)]"
                style={{ opacity: 0 }}
              >
-               all of this happens automatically,{" "}
+               All of this happens automatically,{" "}
                <span ref={effortSpanRef} style={{ color: "var(--dots-color-gray)" }}>
                  without your effort
                </span>
