@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: "Maon: AI Ring",
   description: "Maon is an AI-powered ring built to make you balanced without the effort. Restore your nervous system and reduce stress naturally.",
   keywords: ["AI ring", "nervous system", "stress relief", "wearable", "wellness", "balance"],
+  icons: {
+    icon: "/assets/favicon.svg",
+  },
   openGraph: {
     title: "Maon - AI Ring to Superpower Your Nervous System",
     description: "Maon is an AI-powered ring built to make you balanced without the effort.",
