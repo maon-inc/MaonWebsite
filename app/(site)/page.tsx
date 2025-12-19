@@ -153,12 +153,10 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Mobile Nav (renders its own fixed header) - hidden when past Day section */}
-            {!shouldHideNav && (
-              <div className="md:hidden">
-                <Nav />
-              </div>
-            )}
+            {/* Mobile Nav (renders its own fixed header) - always visible */}
+            <div className="md:hidden">
+              <Nav />
+            </div>
           </div>
         </main>
       </div>

@@ -53,7 +53,7 @@ export default function Waitlist() {
         </p>
 
         {/* Timeline */}
-        <div className="mt-8">
+        <div className="mt-4 md:mt-8">
           <p
             className={
               isDesktop ? "text-d-lato-24-italic" : "text-m-lato-14-italic"
@@ -72,16 +72,16 @@ export default function Waitlist() {
 
         {/* Email form */}
         <div
-          className={`mt-8 flex flex-col gap-4 ${
+          className={`mt-4 md:mt-8 flex flex-col gap-4 ${
             isDesktop ? "w-[70vw] max-w-[600px]" : "w-full"
           }`}
         >
           <input
             type="email"
             placeholder="example@email.com"
-            className={`w-full px-6 py-3 bg-transparent outline-none ${
+            className={`w-full md:w-[80%] px-6 py-3 bg-transparent outline-none ${
               isDesktop
-                ? "text-d-lato-24-bold rounded-[20px]"
+                ? "text-d-lato-20-bold rounded-[20px]"
                 : "text-m-lato-14-bold rounded-[10px]"
             }`}
             style={{
@@ -92,7 +92,7 @@ export default function Waitlist() {
           />
           <button
             type="button"
-            className={`w-full px-6 py-3 ${
+            className={`w-full md:w-[80%] px-6 py-3 ${
               isDesktop
                 ? "text-d-lato-20-bold rounded-[20px]"
                 : "text-m-lato-12-bold rounded-[10px]"

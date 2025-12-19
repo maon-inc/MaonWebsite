@@ -536,7 +536,7 @@ export default function Day() {
         <div
           className={`absolute ${
             isDesktop ? "hidden" : "block"
-          } top-[39vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
+          } top-[40vh] md:top-[35vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
           style={{ border: "0.9px solid black" }}
         >
           {/* Progress fill */}
@@ -598,7 +598,7 @@ export default function Day() {
           {/* Text box - desktop only */}
           <div
             className={`absolute ${
-              isDesktop ? "top-[2.5rem] ml-20" : "hidden"
+              isDesktop ? "top-[1.5rem] ml-20" : "hidden"
             } rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
             style={{ border: "0.9px solid black" }}
           >
