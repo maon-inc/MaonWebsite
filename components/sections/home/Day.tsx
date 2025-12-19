@@ -111,7 +111,7 @@ function CrossfadeText({
     return (
       <div
         className="relative text-center w-full"
-        style={{ marginTop: "53vh" }}
+        style={{ marginTop: "48vh" }}
       >
         {/* Icon - fixed position at top of this container */}
         <div
@@ -175,7 +175,7 @@ function CrossfadeText({
 
   // Desktop layout
   return (
-    <div className="relative text-left max-w-[500px] mt-28 ml-20">
+    <div className="relative text-left max-w-[500px] mt-20 ml-20">
       {/* Icon - fixed position and size */}
       <div className="mb-6" style={{ height: "50px" }}>
         <img
@@ -536,7 +536,7 @@ export default function Day() {
         <div
           className={`absolute ${
             isDesktop ? "hidden" : "block"
-          } top-[44vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
+          } top-[39vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
           style={{ border: "0.9px solid black" }}
         >
           {/* Progress fill */}
@@ -598,7 +598,7 @@ export default function Day() {
           {/* Text box - desktop only */}
           <div
             className={`absolute ${
-              isDesktop ? "top-[3.5rem] ml-20" : "hidden"
+              isDesktop ? "top-[2.5rem] ml-20" : "hidden"
             } rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
             style={{ border: "0.9px solid black" }}
           >

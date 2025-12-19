@@ -5,7 +5,7 @@ import Image from "next/image";
 export default function Intro() {
   return (
     <div className="flex items-center justify-center px-6 md:px-12 h-full">
-      <div className="flex flex-col md:flex-row items-center justify-center gap-8 px-4 md:gap-16 max-w-[1200px] mx-auto">
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8 px-4 md:gap-16 max-w-[1200px] mx-auto -mt-16 md:-mt-12">
         {/* Image on the left */}
         <div className="flex-shrink-0">
           <Image
