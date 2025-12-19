@@ -38,6 +38,25 @@ export default function HeroText() {
       <p className="text-d-lato-20-regular text-[var(--text-primary)]">
         Built to make you balanced without the effort.
       </p>
+      <Link
+        href="/preorder"
+        className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black mt-8"
+        style={{
+          border: "0.9px solid black",
+          borderRadius: "11.28px",
+          backgroundColor: "#D1EBF7",
+          color: "black",
+        }}
+      >
+        Join the waitlist
+        <Image
+          src="/assets/ui/solar_arrow-up-broken.svg"
+          alt=""
+          width={20}
+          height={20}
+          className="w-5 h-5"
+        />
+      </Link>
     </div>
 
       {/* Mobile version - appears after 2 seconds, hides on scroll */}
@@ -54,19 +73,21 @@ export default function HeroText() {
         </p>
         <Link
           href="/preorder"
-          className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular"
+          className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black"
           style={{
             border: "0.9px solid black",
             borderRadius: "11.28px",
             backgroundColor: "#D1EBF7",
+            color: "black",
           }}
         >
           Join the waitlist
           <Image
             src="/assets/ui/solar_arrow-up-broken.svg"
             alt=""
-            width={25}
-            height={25}
+            width={20}
+            height={20}
+            className="w-5 h-5"
           />
         </Link>
       </div>

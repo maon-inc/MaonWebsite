@@ -165,6 +165,9 @@ export default function How({ onIndexChange, children }: HowProps) {
     const section = sectionRef.current;
     if (!section) return;
 
+    // Track whether we've successfully measured with a valid scroll container
+    let hasValidMeasurement = false;
+
     const recompute = () => {
       const scrollContainer = getScrollContainer();
       if (!scrollContainer) return;
@@ -175,12 +178,19 @@ export default function How({ onIndexChange, children }: HowProps) {
       );
       sectionTopRef.current = elementTop;
       sectionHeightRef.current = Math.max(1, elementHeight);
+      hasValidMeasurement = true;
     };
 
     recompute();
     const stopResize = observeResize(section, recompute);
 
     const unsubscribe = subscribe((state) => {
+      // Re-measure if we haven't gotten valid measurements yet
+      // This handles the race condition where the scroll container
+      // wasn't set when the component first mounted
+      if (!hasValidMeasurement) {
+        recompute();
+      }
       const scrollVelocity = Math.abs(state.scrollY - lastScrollYRef.current);
       const now = performance.now();
       
