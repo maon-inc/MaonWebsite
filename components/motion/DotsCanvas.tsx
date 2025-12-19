@@ -190,6 +190,9 @@ function calculateTargetOffset(
   if (anchor === "right-center") {
     // Position on the right side with some margin from edge
     offsetX = canvasWidth - targetWidth - (canvasWidth * 0.15);
+  } else if (anchor === "center-left") {
+    // Position on the left side with some margin from edge
+    offsetX = canvasWidth * 0.1;
   } else if (anchor.includes("left")) {
     offsetX = 0;
   } else if (anchor.includes("right")) {
@@ -208,10 +211,8 @@ function calculateTargetOffset(
     offsetY = (canvasHeight - targetHeight) / 2;
   } else if (anchor === "top-center") {
     // Center in upper portion, leaving room for bottom text
-    const upperRegion = canvasHeight * 0.75;
+    const upperRegion = canvasHeight * 0.65;
     offsetY = (upperRegion - targetHeight) / 2;
-    // Bring down slightly
-    offsetY += canvasHeight * .005;
     offsetY = Math.max(30, offsetY);
   } else if (anchor.includes("top")) {
     offsetY = 0;

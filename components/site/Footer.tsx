@@ -34,11 +34,11 @@ export default function Footer() {
               How it works
             </Link>
             <Link
-              href="/preorder"
+              href="/waitlist"
               className="font-bold hover:opacity-70 transition-opacity"
               style={textStyle}
             >
-              Preorder
+              Waitlist
             </Link>
           </div>
 
@@ -134,7 +134,7 @@ export default function Footer() {
               How it works
             </Link>
             <Link
-              href="/preorder"
+              href="/waitlist"
               className="font-bold hover:opacity-70 transition-opacity"
               style={textStyle}
             >

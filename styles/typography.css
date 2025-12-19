@@ -154,3 +154,78 @@ html {
   letter-spacing: var(--tracking-normal);
   font-optical-sizing: auto;
 }
+
+/* Waitlist page typography */
+.text-d-merriweather-40-bold {
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 52px; /* 40 * 1.3 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-m-merriweather-24-bold {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32.4px; /* 24 * 1.35 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-d-lato-24-italic {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 33.6px; /* 24 * 1.4 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-m-lato-14-regular {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 21px; /* 14 * 1.5 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-m-lato-14-italic {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 21px; /* 14 * 1.5 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-m-lato-14-bold {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px; /* 14 * 1.5 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-m-lato-12-bold {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px; /* 12 * 1.5 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}
+
+.text-d-lato-24-bold {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 33.6px; /* 24 * 1.4 */
+  letter-spacing: var(--tracking-normal);
+  font-optical-sizing: auto;
+}

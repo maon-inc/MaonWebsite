@@ -80,7 +80,7 @@ export default function Nav() {
           <span className="absolute bottom-0 right-0 w-[29px] h-[2px] bg-[#FCFCFC] opacity-30 group-hover:opacity-60 transition-opacity" />
         </Link>
         <Link
-          href="/preorder"
+          href="/waitlist"
           onClick={closeMenu}
           className="text-d-lato-20-bold text-[#FCFCFC] relative group transition-opacity hover:opacity-80"
         >
@@ -120,7 +120,7 @@ export default function Nav() {
           <span className="absolute bottom-0 right-0 w-[29px] h-[2px] bg-foreground opacity-30 group-hover:opacity-60 transition-opacity" />
         </Link>
         <Link
-          href="/preorder"
+          href="/waitlist"
           className="text-d-lato-20-bold relative group transition-opacity hover:opacity-80"
         >
           Save Your Spot

@@ -533,25 +533,32 @@ async function getParsedSvgForUrl(svgUrl: string): Promise<ParsedSvgEntry> {
   parsedSvgCache.set(svgUrl, promise);
   parsedSvgEvictionQueue.push(svgUrl);
 
-  if (parsedSvgEvictionQueue.length > MAX_PARSED_SVGS) {
-    const evictUrl = parsedSvgEvictionQueue.shift();
-    if (evictUrl) {
-      parsedSvgCache
-        .get(evictUrl)
-        ?.then((entry) => {
-          if (entry.container.parentNode) {
-            entry.container.parentNode.removeChild(entry.container);
+  // Only evict AFTER our current promise resolves, so we don't evict
+  // still-loading entries that might be awaited elsewhere
+  promise.then(() => {
+    if (parsedSvgEvictionQueue.length > MAX_PARSED_SVGS) {
+      const evictUrl = parsedSvgEvictionQueue.shift();
+      if (evictUrl && evictUrl !== svgUrl) {
+        const evictPromise = parsedSvgCache.get(evictUrl);
+        if (evictPromise) {
+          // Only clean up if the promise has already resolved
+          evictPromise
+            .then((entry) => {
+              if (entry.container.parentNode) {
+                entry.container.parentNode.removeChild(entry.container);
+              }
+            })
+            .catch(() => undefined);
+          parsedSvgCache.delete(evictUrl);
+          for (const key of fittedPointsCache.keys()) {
+            if (key.startsWith(`${evictUrl}|`)) {
+              fittedPointsCache.delete(key);
+            }
           }
-        })
-        .catch(() => undefined);
-      parsedSvgCache.delete(evictUrl);
-      for (const key of fittedPointsCache.keys()) {
-        if (key.startsWith(`${evictUrl}|`)) {
-          fittedPointsCache.delete(key);
         }
       }
     }
-  }
+  }).catch(() => undefined);
 
   return promise;
 }
