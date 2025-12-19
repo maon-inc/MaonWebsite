@@ -19,8 +19,8 @@ export default function Intro() {
         </div>
 
         {/* Text content on the right */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4 max-w-[500px]">
-          <h2 className="text-d-merriweather-32-regular md:text-d-merriweather-40-regular italic mb-2">
+        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3 max-w-[500px]">
+          <h2 className="mt-[-12px] md:mt-0 text-d-merriweather-32-regular md:text-d-merriweather-40-regular italic mb-2">
             Introducing the
             <br />
             Flow Ring

@@ -61,10 +61,10 @@ const steps: Step[] = [
     iconUrl: "/assets/day_time_svg/8.svg",
     title: "Sleep Deeply",
     body: "Haptics calm your nervous system, helping you fall asleep and recover more effectively.",
-  }
+  },
 ];
 
-const svgUrls = steps.map(s => s.svgUrl);
+const svgUrls = steps.map((s) => s.svgUrl);
 
 function CrossfadeText({
   steps,
@@ -87,12 +87,12 @@ function CrossfadeText({
     if (activeIndex !== displayIndex) {
       // Start fade out
       setOpacity(0);
-      
+
       // After fade completes, switch content and fade in
       if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = window.setTimeout(() => {
         setDisplayIndex(activeIndex);
         // Trigger fade in on next frame
@@ -114,9 +114,12 @@ function CrossfadeText({
   // Mobile: icon is fixed position, title and body flow with margin-top
   if (!isDesktop) {
     return (
-      <div className="relative text-center w-full" style={{ marginTop: "56vh" }}>
+      <div
+        className="relative text-center w-full"
+        style={{ marginTop: "53vh" }}
+      >
         {/* Icon - fixed position at top of this container */}
-        <div 
+        <div
           className="absolute left-1/2 -translate-x-1/2 flex justify-center"
           style={{ top: 0, height: "50px" }}
         >
@@ -124,7 +127,12 @@ function CrossfadeText({
             src={step.iconUrl}
             alt=""
             aria-hidden="true"
-            style={{ width: "50px", height: "50px", opacity, transition: "opacity 300ms ease-in-out" }}
+            style={{
+              width: "50px",
+              height: "50px",
+              opacity,
+              transition: "opacity 300ms ease-in-out",
+            }}
           />
         </div>
         {/* Title - flows below icon with margin-top */}
@@ -172,14 +180,19 @@ function CrossfadeText({
 
   // Desktop layout
   return (
-    <div className="relative text-left max-w-[500px] mt-32 ml-20">
+    <div className="relative text-left max-w-[500px] mt-28 ml-20">
       {/* Icon - fixed position and size */}
       <div className="mb-6" style={{ height: "50px" }}>
         <img
           src={step.iconUrl}
           alt=""
           aria-hidden="true"
-          style={{ width: "50px", height: "50px", opacity, transition: "opacity 300ms ease-in-out" }}
+          style={{
+            width: "50px",
+            height: "50px",
+            opacity,
+            transition: "opacity 300ms ease-in-out",
+          }}
         />
       </div>
       {/* Title - fixed height to prevent layout shift */}
@@ -255,7 +268,6 @@ export default function Day() {
   const scrollIdleTimeoutRef = useRef<number | null>(null);
   const SCROLL_IDLE_MS = 140;
 
-
   const scrollToStep = (index: number) => {
     const scrollContainer = getScrollContainer();
     if (!scrollContainer) return;
@@ -278,7 +290,9 @@ export default function Day() {
     const height = sectionHeightRef.current;
     const buffer = viewportH * 1.5;
 
-    return !(scrollY + viewportH < top - buffer || scrollY > top + height + buffer);
+    return !(
+      scrollY + viewportH < top - buffer || scrollY > top + height + buffer
+    );
   };
 
   const queueSvg = (url: string) => {
@@ -324,12 +338,12 @@ export default function Day() {
 
   useEffect(() => {
     // Preload all SVGs on mount to avoid loading during scroll
-    const uniqueSvgUrls = [...new Set(steps.map(s => s.svgUrl))];
-    
-    uniqueSvgUrls.forEach(url => {
+    const uniqueSvgUrls = [...new Set(steps.map((s) => s.svgUrl))];
+
+    uniqueSvgUrls.forEach((url) => {
       // Trigger cache population
       fetch(url)
-        .then(res => res.text())
+        .then((res) => res.text())
         .catch(() => {}); // Ignore errors, just warm cache
     });
   }, []);
@@ -349,9 +363,9 @@ export default function Day() {
       if (typeof mql.addEventListener === "function") {
         mql.addEventListener("change", update);
       } else {
-        (mql as unknown as { addListener?: (cb: () => void) => void }).addListener?.(
-          update
-        );
+        (
+          mql as unknown as { addListener?: (cb: () => void) => void }
+        ).addListener?.(update);
       }
     } else {
       window.addEventListener("resize", update);
@@ -379,7 +393,9 @@ export default function Day() {
     const recompute = () => {
       const scrollContainer = getScrollContainer();
       const rect = section.getBoundingClientRect();
-      const scrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+      const scrollY = scrollContainer
+        ? scrollContainer.scrollTop
+        : window.scrollY;
       sectionTopRef.current = rect.top + scrollY;
       sectionHeightRef.current = Math.max(1, rect.height);
     };
@@ -400,7 +416,7 @@ export default function Day() {
 
       const scrollVelocity = Math.abs(y - lastY);
       const now = performance.now();
-      
+
       frameCountRef.current++;
 
       // During rapid scrolling, process fewer frames but always update progress
@@ -408,14 +424,17 @@ export default function Day() {
       const skipFrame = isFastScrolling && frameCountRef.current % 2 !== 0;
 
       const scrollStart = sectionTopRef.current;
-      const scrollEnd = sectionTopRef.current + sectionHeightRef.current - viewportH;
+      const scrollEnd =
+        sectionTopRef.current + sectionHeightRef.current - viewportH;
       const scrollRange = scrollEnd - scrollStart;
 
       if (scrollRange <= 0) {
         lastProgressRef.current = 0;
         progressRef.current = 0;
-        if (progressBarRef1.current) progressBarRef1.current.style.transform = "scaleX(0)";
-        if (progressBarRef2.current) progressBarRef2.current.style.transform = "scaleX(0)";
+        if (progressBarRef1.current)
+          progressBarRef1.current.style.transform = "scaleX(0)";
+        if (progressBarRef2.current)
+          progressBarRef2.current.style.transform = "scaleX(0)";
         if (lastActiveIndexRef.current !== 0) {
           lastActiveIndexRef.current = 0;
           setActiveIndex(0);
@@ -482,7 +501,7 @@ export default function Day() {
 
         lastStepChangeRef.current = now;
         lastActiveIndexRef.current = nextIndex;
-        
+
         // Update immediately without RAF batching for responsiveness
         setActiveIndex(nextIndex);
         desiredSvgUrlRef.current = steps[nextIndex].svgUrl;
@@ -496,14 +515,14 @@ export default function Day() {
     };
   }, []);
 
-
-
   // Add separate effect for SVG retargeting:
   useEffect(() => {
     if (activeSvgUrl !== prevSvgUrlRef.current) {
-      const goingUp = activeIndex < (steps.findIndex(s => s.svgUrl === prevSvgUrlRef.current) ?? 0);
+      const goingUp =
+        activeIndex <
+        (steps.findIndex((s) => s.svgUrl === prevSvgUrlRef.current) ?? 0);
       prevSvgUrlRef.current = activeSvgUrl;
-      
+
       retargetToSvg(activeSvgUrl, goingUp ? "snap" : "soft", {
         // Note: opts are capped in DotsCanvas (stiffness/maxSpeed <= 1.6, damping >= 0.95)
         // so we set them to the effective max for a quicker snap.
@@ -515,7 +534,7 @@ export default function Day() {
     }
   }, [activeSvgUrl, activeIndex]);
 
-  const svgScale = isDesktop ? 1.5 : 1.1;
+  const svgScale = isDesktop ? 1.5 : 1;
   const dotAnchor = isDesktop ? "bottom-right" : "top-center";
   // Faster snap: longer lock/force-home window + higher snap thresholds.
   const lockInMs = isDesktop ? 320 : 260;
@@ -552,19 +571,30 @@ export default function Day() {
       </div>
 
       {/* Content in sticky container */}
-      <div className={`sticky top-0 h-screen flex ${isDesktop ? "items-center justify-start" : "items-start justify-center"} pb-16 md:pb-24 col-start-1 row-start-1`}>
+      <div
+        className={`sticky top-0 h-screen flex ${
+          isDesktop
+            ? "items-center justify-start"
+            : "items-start justify-center"
+        } pb-16 md:pb-24 col-start-1 row-start-1`}
+      >
         {/* Text box - fixed position on mobile, positioned above the icon */}
-        <div className={`absolute ${isDesktop ? "hidden" : "block"} top-[48vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+        <div
+          className={`absolute ${
+            isDesktop ? "hidden" : "block"
+          } top-[44vh] left-1/2 -translate-x-1/2 rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
+          style={{ border: "0.9px solid black" }}
+        >
           {/* Progress fill */}
-          <div 
+          <div
             ref={progressBarRef1}
-            className="absolute inset-0 rounded-[10px]" 
-            style={{ 
+            className="absolute inset-0 rounded-[10px]"
+            style={{
               backgroundColor: "#97CEE7",
               transform: "scaleX(0)",
               transformOrigin: "left center",
-              willChange: "transform"
-            }} 
+              willChange: "transform",
+            }}
           />
           {/* Segment dividers (one per step) */}
           <div
@@ -580,7 +610,10 @@ export default function Day() {
           {/* Clickable segments */}
           <div
             className="absolute inset-0 z-30 grid"
-            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, touchAction: "manipulation" }}
+            style={{
+              gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`,
+              touchAction: "manipulation",
+            }}
           >
             {steps.map((s, i) => (
               <button
@@ -597,21 +630,34 @@ export default function Day() {
               />
             ))}
           </div>
-          <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
+          <p className="relative text-[14px] font-[var(--font-sans)]">
+            DAY IN THE LIFE WITH MAON
+          </p>
         </div>
-        <div className={`flex flex-col ${isDesktop ? "items-start justify-start" : "items-center justify-start"} px-6 md:px-12 lg:px-16 relative z-10 w-full`}>
+        <div
+          className={`flex flex-col ${
+            isDesktop
+              ? "items-start justify-start"
+              : "items-center justify-start"
+          } px-6 md:px-12 lg:px-16 relative z-10 w-full`}
+        >
           {/* Text box - desktop only */}
-          <div className={`absolute ${isDesktop ? "top-[4rem] ml-20" : "hidden"} rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`} style={{ border: "0.9px solid black" }}>
+          <div
+            className={`absolute ${
+              isDesktop ? "top-[3.5rem] ml-20" : "hidden"
+            } rounded-[10px] px-8 py-2 z-20 whitespace-nowrap overflow-hidden`}
+            style={{ border: "0.9px solid black" }}
+          >
             {/* Progress fill */}
-            <div 
+            <div
               ref={progressBarRef2}
-              className="absolute inset-0 rounded-[10px]" 
-              style={{ 
+              className="absolute inset-0 rounded-[10px]"
+              style={{
                 backgroundColor: "#97CEE7",
                 transform: "scaleX(0)",
                 transformOrigin: "left center",
-                willChange: "transform"
-              }} 
+                willChange: "transform",
+              }}
             />
             {/* Segment dividers (one per step) */}
             <div
@@ -627,7 +673,10 @@ export default function Day() {
             {/* Clickable segments */}
             <div
               className="absolute inset-0 z-30 grid"
-              style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, touchAction: "manipulation" }}
+              style={{
+                gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`,
+                touchAction: "manipulation",
+              }}
             >
               {steps.map((s, i) => (
                 <button
@@ -644,7 +693,9 @@ export default function Day() {
                 />
               ))}
             </div>
-            <p className="relative text-[14px] font-[var(--font-sans)]">DAY IN THE LIFE WITH MAON</p>
+            <p className="relative text-[14px] font-[var(--font-sans)]">
+              DAY IN THE LIFE WITH MAON
+            </p>
           </div>
           <CrossfadeText
             steps={steps}
