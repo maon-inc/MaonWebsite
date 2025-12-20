@@ -1876,12 +1876,13 @@ export default function DotsCanvas({
         mountedCanvasInstances.delete(fn);
         retargetFnRef.current = null;
       }
-      if (mountedCanvasInstances.size === 0) {
+      queueMicrotask(() => {
+        if (mountedCanvasInstances.size !== 0) return;
         // Clear SVG parsing and fitted points caches (removes DOM elements from body)
         clearSvgCaches();
         // Reset engine state (stops RAF loop, clears subscribers, resets scroll container)
         resetEngine();
-      }
+      });
     };
   }, []);
 
