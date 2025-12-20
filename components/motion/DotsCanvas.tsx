@@ -376,6 +376,7 @@ export default function DotsCanvas({
   const pendingRetargetRef = useRef<{ svgUrl: string; mode: RetargetMode } | null>(
     null
   );
+  const retargetFnRef = useRef<RetargetFn | null>(null);
   const pendingResizeSnapRef = useRef(false);
   const targetsLoadSeqRef = useRef(0);
   const targetsLoadingRef = useRef(false);
@@ -1233,9 +1234,13 @@ export default function DotsCanvas({
     const fn: RetargetFn = (svgUrl: string, mode: RetargetMode, opts?: RetargetOpts) => {
       retargetToSvgInternal(svgUrl, mode, opts);
     };
+    retargetFnRef.current = fn;
     mountedCanvasInstances.add(fn);
     return () => {
       mountedCanvasInstances.delete(fn);
+      if (retargetFnRef.current === fn) {
+        retargetFnRef.current = null;
+      }
     };
   }, [retargetToSvgInternal]);
 
@@ -1866,12 +1871,17 @@ export default function DotsCanvas({
 
   useEffect(() => {
     return () => {
-      // Clear SVG parsing and fitted points caches (removes DOM elements from body)
-      clearSvgCaches();
-      // Reset engine state (stops RAF loop, clears subscribers, resets scroll container)
-      resetEngine();
-      // Clear the global retarget functions set
-      mountedCanvasInstances.clear();
+      const fn = retargetFnRef.current;
+      if (fn) {
+        mountedCanvasInstances.delete(fn);
+        retargetFnRef.current = null;
+      }
+      if (mountedCanvasInstances.size === 0) {
+        // Clear SVG parsing and fitted points caches (removes DOM elements from body)
+        clearSvgCaches();
+        // Reset engine state (stops RAF loop, clears subscribers, resets scroll container)
+        resetEngine();
+      }
     };
   }, []);
 

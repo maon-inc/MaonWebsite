@@ -72,7 +72,16 @@ function updateState() {
 
 function tick() {
   updateState();
-  subscribers.forEach((subscriber) => subscriber(state));
+  subscribers.forEach((subscriber) => {
+    try {
+      subscriber(state);
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        // Keep the RAF loop alive even if a subscriber throws.
+        console.error("[motion engine] subscriber error", error);
+      }
+    }
+  });
   rafId = requestAnimationFrame(tick);
 }
 
