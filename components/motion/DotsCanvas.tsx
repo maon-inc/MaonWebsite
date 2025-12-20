@@ -1796,6 +1796,14 @@ export default function DotsCanvas({
         return;
       }
 
+      // Don't start animation until we have targets loaded
+      // This prevents the dots from getting stuck when targets load late
+      if (currentHomeRef.current.length === 0 && sceneTargetsRef.current.size === 0) {
+        // Targets not ready yet - just update time tracking but don't start animation
+        lastTimeRef.current = state.time;
+        return;
+      }
+
       if (startTsRef.current === null) {
         startTsRef.current = state.time;
         phaseRef.current = "initial";

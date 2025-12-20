@@ -33,6 +33,12 @@ export function setScrollSource(getScrollY: (() => number) | null) {
 export function setScrollContainer(el: HTMLElement | null) {
   scrollContainerEl = el;
   setScrollSource(el ? () => el.scrollTop : null);
+  // Immediately update state with correct scroll position when container changes
+  // This prevents stale scrollY values when switching from window to custom container
+  if (rafId !== null) {
+    previousScrollY = readScrollY();
+    updateState();
+  }
 }
 
 export function getScrollContainer(): HTMLElement | null {
