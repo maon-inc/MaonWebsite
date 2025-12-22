@@ -7,24 +7,24 @@ export default function PrivacyPolicy() {
   const isDesktop = useIsDesktop();
 
   const headerClass = isDesktop
-    ? "text-d-merriweather-40-bold"
-    : "text-m-merriweather-24-bold";
+    ? "serif-700-40"
+    : "serif-700-24";
 
   const sectionHeaderClass = isDesktop
-    ? "text-d-lato-24-bold mt-8"
-    : "text-m-lato-14-bold mt-6";
+    ? "sans-700-24 mt-8"
+    : "sans-700-14 mt-6";
 
   const subHeaderClass = isDesktop
-    ? "text-d-lato-24-bold mt-4"
-    : "text-m-lato-14-bold mt-3";
+    ? "sans-700-24 mt-4"
+    : "sans-700-14 mt-3";
 
   const bodyClass = isDesktop
-    ? "text-d-lato-24-regular mt-4"
-    : "text-m-lato-14-regular mt-3";
+    ? "sans-400-24 mt-4"
+    : "sans-400-14 mt-3";
 
   const listClass = isDesktop
-    ? "text-d-lato-24-regular mt-2 ml-6"
-    : "text-m-lato-14-regular mt-2 ml-4";
+    ? "sans-400-24 mt-2 ml-6"
+    : "sans-400-14 mt-2 ml-4";
 
   return (
     <div className="min-h-screen px-6 md:px-20 py-20">

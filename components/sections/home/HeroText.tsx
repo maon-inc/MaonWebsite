@@ -32,15 +32,15 @@ export default function HeroText() {
     <>
       {/* Desktop version */}
       <div className="hidden md:block absolute bottom-20 left-16 max-w-[600px] z-20">
-      <h1 className="text-d-merriweather-48-bold mb-4 text-[var(--text-primary)]">
+      <h1 className="serif-700-48 mb-4 text-[var(--text-primary)]">
         AI ring to superpower your nervous system.
       </h1>
-      <p className="text-d-lato-20-regular text-[var(--text-primary)]">
+      <p className="sans-400-20 text-[var(--text-primary)]">
         Built to make you balanced without the effort.
       </p>
       <Link
         href="/waitlist"
-        className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black mt-8"
+        className="inline-flex items-center gap-2 px-5 py-2.5 w-fit sans-400-16 md:sans-400-20 !text-black mt-8"
         style={{
           border: "0.9px solid black",
           borderRadius: "11.28px",
@@ -65,15 +65,15 @@ export default function HeroText() {
           isVisible && !isScrolled ? "opacity-100" : "opacity-0"
         }`}
       >
-        <h1 className="text-d-merriweather-32-regular mb-3 w-[350px] text-[var(--text-primary)]">
+        <h1 className="serif-400-32 mb-3 w-[350px] text-[var(--text-primary)]">
           AI ring to superpower your nervous system.
         </h1>
-        <p className="text-d-lato-20-regular w-[300px] text-[var(--text-primary)] mb-6">
+        <p className="sans-400-20 w-[300px] text-[var(--text-primary)] mb-6">
           Built to make you balanced without the effort.
         </p>
         <Link
           href="/waitlist"
-          className="inline-flex items-center gap-2 px-5 py-2.5 w-fit text-m-lato-16-regular md:text-d-lato-20-regular !text-black"
+          className="inline-flex items-center gap-2 px-5 py-2.5 w-fit sans-400-16 md:sans-400-20 !text-black"
           style={{
             border: "0.9px solid black",
             borderRadius: "11.28px",

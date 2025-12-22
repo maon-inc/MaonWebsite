@@ -86,14 +86,14 @@ export default function Problem() {
     >
       <div className="text-center md:text-left max-w-[600px] md:max-w-[700px] lg:max-w-[800px]">
         <p
-          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular mb-6 text-[var(--text-primary)]"
+          className="serif-400-30 md:serif-400-45 mb-6 text-[var(--text-primary)]"
           style={{ opacity: fadeOutOpacity }}
         >
           10 minutes. That is how often your nervous system is interrupted. And
           because of that, stress accumulates and balance slips away.
         </p>
         <p
-          className="text-m-merriweather-30-regular md:text-d-merriweather-45-regular text-[var(--text-primary)]"
+          className="serif-400-30 md:serif-400-45 text-[var(--text-primary)]"
           style={{ opacity: fadeInOpacity }}
         >
           It is time to restore balance.

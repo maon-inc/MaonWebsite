@@ -72,8 +72,8 @@ export default function Waitlist() {
         <div
           className={`fixed z-40 px-4 py-2 left-1/2 -translate-x-1/2 ${
             isDesktop
-              ? "text-d-lato-20-regular top-8"
-              : "text-m-lato-14-regular top-14"
+              ? "sans-400-20 top-8"
+              : "sans-400-14 top-14"
           }`}
           style={{
             backgroundColor: "#ffffff",
@@ -100,8 +100,8 @@ export default function Waitlist() {
         <h1
           className={
             isDesktop
-              ? "text-d-merriweather-40-bold"
-              : "text-m-merriweather-24-bold"
+              ? "serif-700-40"
+              : "serif-700-24"
           }
         >
           Flow Ring
@@ -111,8 +111,8 @@ export default function Waitlist() {
         <p
           className={`opacity-50 mt-4 ${
             isDesktop
-              ? "text-d-lato-24-regular max-w-[500px]"
-              : "text-m-lato-16-regular"
+              ? "sans-400-24 max-w-[500px]"
+              : "sans-400-16"
           }`}
         >
           Smart ring that monitors your body&apos;s signals and delivers timely
@@ -123,14 +123,14 @@ export default function Waitlist() {
         <div className="mt-4 md:mt-8">
           <p
             className={
-              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-16-italic"
+              isDesktop ? "sans-400-24-italic" : "sans-400-16-italic"
             }
           >
             <span className="font-bold not-italic">Preorder</span> June 2026
           </p>
           <p
             className={
-              isDesktop ? "text-d-lato-24-italic" : "text-m-lato-16-italic"
+              isDesktop ? "sans-400-24-italic" : "sans-400-16-italic"
             }
           >
             <span className="font-bold not-italic">Launch</span> December 2026
@@ -155,8 +155,8 @@ export default function Waitlist() {
             disabled={status === "loading" || status === "success"}
             className={`w-full md:w-[80%] px-6 py-3 bg-transparent outline-none ${
               isDesktop
-                ? "text-d-lato-20-bold rounded-[20px]"
-                : "text-m-lato-14-bold rounded-[10px]"
+                ? "sans-700-20 rounded-[20px]"
+                : "sans-700-14 rounded-[10px]"
             } ${status === "loading" ? "opacity-50" : ""}`}
             style={{
               border: isDesktop
@@ -170,8 +170,8 @@ export default function Waitlist() {
             disabled={status === "loading" || status === "success"}
             className={`w-full md:w-[80%] px-6 py-3 ${
               isDesktop
-                ? "text-d-lato-20-bold rounded-[20px]"
-                : "text-m-lato-12-bold rounded-[10px]"
+                ? "sans-700-20 rounded-[20px]"
+                : "sans-700-12 rounded-[10px]"
             } ${status === "loading" ? "opacity-50" : ""}`}
             style={{
               backgroundColor: status === "success" ? "#A8E6CF" : "#D1EBF7",

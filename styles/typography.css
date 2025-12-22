@@ -6,16 +6,29 @@
   - Sans: Lato
 
   Naming convention:
-  - text-{d|m}-{font}-{size}-{weight}
-  - d = desktop, m = mobile
+  - serif-{weight}-{size}[-italic]
+  - sans-{weight}-{size}[-italic]
 */
 
 :root {
-  --font-serif: var(--font-merriweather);
-  --font-sans: var(--font-lato);
-
   /* Default tracking (Figma often uses 0, but make it explicit) */
   --tracking-normal: 0em;
+}
+
+/* ==========================================================================
+   GOOGLE SANS FLEX (variable font)
+   ========================================================================== */
+
+.google-sans-flex {
+  font-family: var(--font-google-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Arial, sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0,
+    "wdth" 100,
+    "GRAD" 0,
+    "ROND" 0;
 }
 
 /* Global type rendering helpers (optional but helps match Figma) */
@@ -26,11 +39,11 @@ html {
 }
 
 /* ==========================================================================
-   DESKTOP MERRIWEATHER STYLES
+   SERIF (MERRIWEATHER) STYLES
    ========================================================================== */
 
 /* Used in: HeroText (main hero heading) */
-.text-d-merriweather-48-bold {
+.serif-700-48 {
   font-family: var(--font-serif);
   font-size: 48px;
   font-weight: 700;
@@ -40,7 +53,7 @@ html {
 }
 
 /* Used in: Problem (main problem statement text) */
-.text-d-merriweather-45-regular {
+.serif-400-45 {
   font-family: var(--font-serif);
   font-size: 45px;
   font-weight: 400;
@@ -50,7 +63,7 @@ html {
 }
 
 /* Used in: Intro, SaveSpot, How (section headings) */
-.text-d-merriweather-40-regular {
+.serif-400-40 {
   font-family: var(--font-serif);
   font-size: 40px;
   font-weight: 400;
@@ -60,7 +73,7 @@ html {
 }
 
 /* Used in: Waitlist, TermsOfService, PrivacyPolicy, OurStory (page titles) */
-.text-d-merriweather-40-bold {
+.serif-700-40 {
   font-family: var(--font-serif);
   font-size: 40px;
   font-weight: 700;
@@ -70,7 +83,7 @@ html {
 }
 
 /* Used in: HeroText (mobile hero heading), Day (section headings) */
-.text-d-merriweather-32-regular {
+.serif-400-32 {
   font-family: var(--font-serif);
   font-size: 32px;
   font-weight: 400;
@@ -80,7 +93,7 @@ html {
 }
 
 /* Used in: How (how-it-works section text on mobile) */
-.text-d-merriweather-24-regular {
+.serif-400-24 {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 400;
@@ -90,7 +103,7 @@ html {
 }
 
 /* Used in: Nav (navigation menu items) */
-.text-d-merriweather-20-regular {
+.serif-400-20 {
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 400;
@@ -100,11 +113,11 @@ html {
 }
 
 /* ==========================================================================
-   DESKTOP LATO STYLES
+   SANS (LATO) STYLES
    ========================================================================== */
 
 /* Used in: Day, Intro, OurStory, TermsOfService, PrivacyPolicy (body text) */
-.text-d-lato-24-regular {
+.sans-400-24 {
   font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 400;
@@ -114,7 +127,7 @@ html {
 }
 
 /* Used in: Waitlist (confirmation message italic text) */
-.text-d-lato-24-italic {
+.sans-400-24-italic {
   font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 400;
@@ -125,7 +138,7 @@ html {
 }
 
 /* Used in: TermsOfService, PrivacyPolicy (section headings) */
-.text-d-lato-24-bold {
+.sans-700-24 {
   font-family: var(--font-sans);
   font-size: 24px;
   font-weight: 700;
@@ -135,7 +148,7 @@ html {
 }
 
 /* Used in: HeroText, Intro, SaveSpot, Nav, Waitlist (body text, nav links) */
-.text-d-lato-20-regular {
+.sans-400-20 {
   font-family: var(--font-sans);
   font-size: 20px;
   font-weight: 400;
@@ -145,7 +158,7 @@ html {
 }
 
 /* Used in: Nav, OurStory, Waitlist (CTA buttons, bold nav links) */
-.text-d-lato-20-bold {
+.sans-700-20 {
   font-family: var(--font-sans);
   font-size: 20px;
   font-weight: 700;
@@ -155,11 +168,11 @@ html {
 }
 
 /* ==========================================================================
-   MOBILE MERRIWEATHER STYLES
+   MOBILE-SIZED SERIF (MERRIWEATHER) STYLES
    ========================================================================== */
 
 /* Used in: Problem, DayAutoEffort (mobile problem statement, day effort text) */
-.text-m-merriweather-30-regular {
+.serif-400-30 {
   font-family: var(--font-serif);
   font-size: 30px;
   font-weight: 400;
@@ -169,7 +182,7 @@ html {
 }
 
 /* Used in: Waitlist, TermsOfService, PrivacyPolicy, OurStory (mobile page titles) */
-.text-m-merriweather-24-bold {
+.serif-700-24 {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 700;
@@ -179,11 +192,11 @@ html {
 }
 
 /* ==========================================================================
-   MOBILE LATO STYLES
+   MOBILE-SIZED SANS (LATO) STYLES
    ========================================================================== */
 
 /* Used in: HeroText, Intro, SaveSpot, Waitlist (mobile CTA buttons, body text) */
-.text-m-lato-16-regular {
+.sans-400-16 {
   font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 400;
@@ -193,7 +206,7 @@ html {
 }
 
 /* Used in: Waitlist (mobile confirmation message italic text) */
-.text-m-lato-16-italic {
+.sans-400-16-italic {
   font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 400;
@@ -204,7 +217,7 @@ html {
 }
 
 /* Used in: Waitlist, OurStory, TermsOfService, PrivacyPolicy (mobile body text) */
-.text-m-lato-14-regular {
+.sans-400-14 {
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 400;
@@ -214,7 +227,7 @@ html {
 }
 
 /* Used in: TermsOfService, PrivacyPolicy, Waitlist (mobile section headings, buttons) */
-.text-m-lato-14-bold {
+.sans-700-14 {
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 700;
@@ -224,7 +237,7 @@ html {
 }
 
 /* Used in: Waitlist, OurStory (small mobile CTA buttons) */
-.text-m-lato-12-bold {
+.sans-700-12 {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 700;

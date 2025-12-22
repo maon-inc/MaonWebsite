@@ -152,7 +152,7 @@
            >
              <p
                ref={lineRef}
-               className="text-m-merriweather-30-regular text-[var(--text-primary)]"
+               className="serif-400-30 text-[var(--text-primary)]"
                style={{ opacity: 0 }}
              >
                All of this happens automatically,{" "}

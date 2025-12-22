@@ -72,7 +72,7 @@ function CrossfadeText({
       className={`relative ${isDesktop ? "text-left max-w-[600px]" : "text-center w-full px-6"}`}
     >
       <p
-        className={isDesktop ? "text-d-merriweather-40-regular" : "text-d-merriweather-24-regular"}
+        className={isDesktop ? "serif-400-40" : "serif-400-24"}
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",

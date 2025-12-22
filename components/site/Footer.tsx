@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   const textStyle = {
-    fontFamily: "var(--font-lato), Arial, Helvetica, sans-serif",
+    fontFamily: "var(--font-sans-2), Arial, Helvetica, sans-serif",
     fontSize: "16px",
     lineHeight: "1.4",
   };

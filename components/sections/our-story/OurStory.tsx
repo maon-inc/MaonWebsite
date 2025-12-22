@@ -31,8 +31,8 @@ export default function OurStory() {
         <h1
           className={
             isDesktop
-              ? "text-d-merriweather-40-bold"
-              : "text-m-merriweather-24-bold"
+              ? "serif-700-40"
+              : "serif-700-24"
           }
         >
           Our Story
@@ -42,8 +42,8 @@ export default function OurStory() {
         <p
           className={`opacity-70 mt-4 ${
             isDesktop
-              ? "text-d-lato-24-regular"
-              : "text-m-lato-14-regular"
+              ? "sans-400-24"
+              : "sans-400-14"
           }`}
         >
           Maon Intelligence is an AI wearable company founded in 2025
@@ -53,8 +53,8 @@ export default function OurStory() {
         <p
           className={`opacity-70 mt-4 ${
             isDesktop
-              ? "text-d-lato-24-regular"
-              : "text-m-lato-14-regular"
+              ? "sans-400-24"
+              : "sans-400-14"
           }`}
         >
           We began in a lab at Cornell University where we found a bunch of cool stuff
@@ -66,8 +66,8 @@ export default function OurStory() {
         <p
           className={`opacity-70 mt-4 ${
             isDesktop
-              ? "text-d-lato-24-regular"
-              : "text-m-lato-14-regular"
+              ? "sans-400-24"
+              : "sans-400-14"
           }`}
         >
           We aim to help people achieve better balance and make more deliberate
@@ -79,8 +79,8 @@ export default function OurStory() {
           <p
             className={`opacity-70 ${
               isDesktop
-                ? "text-d-lato-24-regular"
-                : "text-m-lato-14-regular"
+                ? "sans-400-24"
+                : "sans-400-14"
             }`}
           >
             If you are interested in joining us as an investor.
@@ -93,8 +93,8 @@ export default function OurStory() {
             href="mailto:contact@maon.io"
             className={`inline-block px-12 py-3 text-center ${
               isDesktop
-                ? "text-d-lato-20-bold rounded-[20px]"
-                : "text-m-lato-12-bold rounded-[10px]"
+                ? "sans-700-20 rounded-[20px]"
+                : "sans-700-12 rounded-[10px]"
             }`}
             style={{
               backgroundColor: "#D1EBF7",

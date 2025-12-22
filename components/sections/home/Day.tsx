@@ -132,7 +132,7 @@ function CrossfadeText({
         </div>
         {/* Title - flows below icon with margin-top */}
         <h2
-          className="text-d-merriweather-32-regular mt-16 mb-3 px-4"
+          className="serif-400-32 mt-16 mb-3 px-4"
           style={{
             opacity,
             transition: "opacity 300ms ease-in-out",
@@ -142,7 +142,7 @@ function CrossfadeText({
         </h2>
         {/* Body text - flows below title */}
         <p
-          className="text-d-lato-24-regular w-[350px] mx-auto"
+          className="sans-400-24 w-[350px] mx-auto"
           style={{
             opacity,
             transition: "opacity 300ms ease-in-out",
@@ -192,7 +192,7 @@ function CrossfadeText({
       </div>
       {/* Title - fixed height to prevent layout shift */}
       <h2
-        className="text-d-merriweather-32-regular mb-4"
+        className="serif-400-32 mb-4"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
@@ -203,7 +203,7 @@ function CrossfadeText({
       </h2>
       {/* Body text - can vary in height */}
       <p
-        className="text-d-lato-24-regular w-[400px]"
+        className="sans-400-24 w-[400px]"
         style={{
           opacity,
           transition: "opacity 300ms ease-in-out",
